@@ -1,35 +1,39 @@
-# Stample: The Bottomless Mine
+# Stample: the slow art of peeling stamps
 
-A retro pixel mining game in plain HTML, CSS and JavaScript. No build step, no dependencies.
-
-The look and feel come from [Dicele](../Dicele); the gameplay, items, upgrades and achievements come from RogueMiner (Unity).
+A cozy beach-side postcard and stamp collecting game in plain HTML, CSS and JavaScript. No build step, no dependencies.
 
 ## How to play
 
-1. **Smash the rock.** Tap it to swing, hold to keep swinging. It wiggles: a swing that misses does nothing.
-2. **Damage** = (strength × 10 + pickaxe × 100) ÷ hardness, ±10% plus agility, times a crit roll (0.4× up to 3.6×).
-3. **Every rock** pays score (80 × dimension × luck × player power) and drops one find: common stone, uncommon mineral, rare gem, epic gem or legendary element. Luckier rocks drop better finds.
-4. **Reach the goal** (400 × 1.15^level) before the rocks run out and you go a level deeper with 6 + 3 × level rocks. Out of rocks below the goal ends the run.
-5. **Deeper is darker.** Every level the cage takes you 50 m down. The lamplight shrinks, all sound drops half a semitone and gains echo (an octave at most), the mine's drone, whispers and heartbeat grow, and more pairs of eyes open in the dark and turn to watch you. Rare finds make the shaft lurch and every eye go wide.
-6. **Rocks come in 50 patterns and 13 kinds of stone and crystal**: boulders, slabs, chipped chunks and pebbles, banded, veined, mossy, rusted, pyrite-studded and more, with stranger ones unlocking the deeper you go. About 1 in 25 is a glittering geode, and about 1 in 100 is a **fossil**: the only place to dig up one of 100 dinosaurs in the ⚱ Archeology collection, which also sends a giant shadow dinosaur stomping across the mine. About 1 in 200 is a glowing **mushroom**: the only place to pick one of 100 real species in the 🍄 Mushroom collection, followed by a few seconds of melting colors and bending sound. Every find tumbles out of the rock, bounces on the cave floor with a sound to match (a pebble ticks, an element crashes) and flies into the bag.
-7. **Combo:** every hand hit in a row adds 4% damage (up to 3×). ⛏ Auto-mine swings by itself, but slowly and without a combo. ≋ silences the mine's ambience, ♪ all sound.
-8. **Style and chaos:** dead-center PERFECT hits, OVERKILL and QUICK bonuses, GOLD FEVER at a 50 combo, random cave-ins, canaries, gold veins and ghost miners, rocks that talk back, rare pet rocks, eyes you can poke, a sign you can knock down, and a few secrets (some typed, one very old) behind 8 hidden achievements.
-9. **Finds, gold, upgrades and achievements are kept forever.** Sell finds in the bag (dinosaurs and mushrooms sit together under its ❓ SECRET tab); the shop's 8 upgrades (up to 100 levels each) cost gold and specific finds.
+1. **Postcards arrive** from a chain of pen pals, exactly one in each of the world's 197 countries, each with a typical local name. A card always goes to the next country, and that country's pen pal writes the next card (often mentioning who wrote to them before).
+2. **Peel the stamp slowly.** Drag across it again and again. Fast drags build up **strain**, and at full strain the stamp tears. Old stamps are more fragile and some cards are glued harder.
+3. **The stamp** comes from the card's country and is a real issue from `stamps_filled.xml`. Its id is the country code and release year, like `GB-1840`.
+4. **The seal** (postmark) comes from a random country, dated between the stamp's release year and 2026.
+5. **Quality** (out of 100):
+   - Condition: no tears 40, one 28, two 16, more 6
+   - Luck: the closer the seal is to the stamp's center, the more of 25
+   - Home seal: the seal is from the stamp's own country, +20
+   - First day: the seal year is the stamp's release year, +15
+6. **The album** keeps the best copy of every stamp. Sort it by origin (country, then year), by year or by seal quality. Stamps and countries you don't have yet are just **?**.
 
-Buttons: 🏆 leaderboard (this device), ? rules, ⚡ flashy animations, ♪ sound, 🎒 bag, 🛒 shop, 🏅 achievements.
+## The beach
+
+Waves and a rolling tide, a striped towel under the postcard, a volleyball to keep in the air, visitors that pass by now and then, and 21 hidden secrets (the help screen counts them). Messages in bottles give hints.
 
 ## Files
 
 | File | What it is |
 |---|---|
 | `index.html` | Page structure |
-| `style.css` | Pixel mine look and all animations |
-| `script.js` | Game rules, sound (Web Audio), effects, bag, shop, achievements |
-| `data.js` | 160 items, 8 upgrades and 104 achievements generated from RogueMiner's `Loot-DB`, `ShopDB` and `Achievement-DB`, plus 100 dinosaurs, 100 mushrooms and their 10 achievements |
+| `style.css` | Beach, postcard and album look |
+| `script.js` | Peeling, quality, postcards, album, sound (Web Audio), beach and secrets |
+| `data.js` | One pen pal per country (matched by name to the XML), stamp motifs, postcard texts |
+| `stamps_filled.xml` | The world: 197 countries and their ~25,000 dated stamps |
 
-Saves live in `localStorage` (`stample-save`, `stample-leaderboard`).
+Saves live in `localStorage` (`stample-v2`).
 
 ## Run locally
+
+The XML is loaded with `fetch`, so the game needs a web server:
 
 ```bash
 python -m http.server 8125
