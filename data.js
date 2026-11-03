@@ -314,5 +314,41 @@ const TEXT_PS = [
 ];
 const SMELLS = ["cinnamon", "the sea", "old books", "rain", "fresh bread", "a slightly damp dog", "oranges", "pine trees", "adventure"];
 
-// Funny lines when you tear a stamp
-const TEAR_QUIPS = ["RRRIP!", "oops.", "a tiny tragedy", "the perforation wins", "gentle!", "slower, slower…", "it felt that"];
+// Funny lines when you tear a stamp, one per tear, getting more desperate (the stamp falls apart at the 8th)
+const TEAR_JOKES = [
+  "oops. tiny rip.",
+  "that's… fine. totally fine.",
+  "the stamp would like to speak to your manager",
+  "quality just went negative. impressive!",
+  "somewhere, a philatelist faints 😵",
+  "the Universal Postal Union has been notified",
+  "this is technically confetti now",
+  "💥 KAPUTT",
+];
+const TEAR_QUIPS = ["RRRIP!", "the perforation wins", "slower, slower…", "it felt that", "a moment of silence, please"];
+
+// The big ☠️ PHILATELIC CATASTROPHE alert, when quality drops below zero
+const DOOM_JOKES = [
+  "the stamp has been laid to rest in your album",
+  "Queen Victoria is turning in her portrait",
+  "stamp collectors across 197 countries felt a disturbance",
+  "the postman saw this and quietly resigned",
+  "it's not a stamp anymore, it's modern art",
+  "the glue is the only part that survived",
+  "even the seagull won't take it",
+  "insurance does not cover 'enthusiasm'",
+  "this will be studied in philately school. as a warning.",
+  "the stamp's last words were 'please, slower'",
+];
+
+// One of these turns up under the grade on every result
+const GRADE_QUIPS = {
+  "GEM MINT": ["museums will fight over this", "you have the hands of a surgeon", "the stamp is crying tears of joy"],
+  "SUPERB": ["the album sparkles a little brighter", "a collector just nodded at you approvingly", "chef's kiss"],
+  "VERY FINE": ["very fine indeed, darling", "your grandma would frame this", "solid work, keep peeling"],
+  "FINE": ["it's fine. it's FINE.", "respectable. like a beige cardigan.", "nothing a little love can't fix"],
+  "FAIR": ["it's seen things", "has character, as they say", "well, it's a stamp. mostly."],
+  "POOR": ["the stamp needs a hug", "it survived, technically", "we don't talk about this one"],
+  "WRECK": ["the stamp is in witness protection now", "this is why we can't have nice things", "please hold the stamp gently next time. it has a family."],
+  "PHILATELIC CATASTROPHE": ["the album will need therapy", "you owe that stamp an apology", "achievement unlocked: crime", "the stamp went to stamp heaven"],
+};

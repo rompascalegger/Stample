@@ -8,7 +8,11 @@ const SAVE_KEY = "stample-v2";
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const VALUES = [1, 2, 3, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 80, 100, 120, 150, 200, 250, 500];
 // [minimum quality, name, stars]
-const GRADES = [[90, "GEM MINT", 5], [75, "SUPERB", 4], [60, "VERY FINE", 3], [45, "FINE", 2], [25, "FAIR", 1], [0, "POOR", 0]];
+// Quality can sink below zero: a stamp can be ruined all the way to destruction
+const GRADES = [[90, "GEM MINT", 5], [75, "SUPERB", 4], [60, "VERY FINE", 3], [45, "FINE", 2], [25, "FAIR", 1], [0, "POOR", 0],
+  [-30, "WRECK", -1], [-Infinity, "PHILATELIC CATASTROPHE", -2]];
+// This many tears and the stamp falls apart
+const DESTROY_AT = 8;
 // Rarity decides how often a stamp turns up on a card: famous (sourced) stamps are the rarest
 const RARITY = {
   legendary: { name: "Legendary", weight: 0.25 },
@@ -185,7 +189,10 @@ const sfx = {
   // A soft zipper whose pitch climbs as the tear-out goes around
   rip(p, speed) { noise(0.07, { freq: 700 + p * 1300 + speed * 300, q: 4, vol: 0.05 }); tone(300 + p * 500, 0.05, { vol: 0.015, type: "triangle" }); },
   // A cartoon "oops": a soft paper fwip and a sliding-down whistle
-  tear() { noise(0.2, { freq: 1200, q: 1, vol: 0.12, to: 400 }); tone(620, 0.35, { to: 220, vol: 0.08, type: "triangle", wobble: 12 }); },
+  // Each further tear slides lower and sadder
+  tear(n = 1) { noise(0.2, { freq: 1200, q: 1, vol: 0.12, to: 400 }); tone(Math.max(180, 640 - n * 45), 0.35, { to: Math.max(90, 220 - n * 15), vol: 0.08, type: "triangle", wobble: 12 + n * 3 }); },
+  // Wah, wah, wah, waaah
+  sadTrombone() { [[294, 0.35], [277, 0.35], [262, 0.35], [247, 1.1]].forEach(([f, d], i) => tone(f, d, { type: "triangle", vol: 0.1, delay: i * 0.38, to: i === 3 ? 200 : null, wobble: i === 3 ? 9 : 3 })); },
   pop() { tone(420, 0.12, { to: 900, vol: 0.12 }); tone(900, 0.08, { vol: 0.05, delay: 0.07 }); },
   // A rubber band boing when glue strands let go
   snap() { tone(260, 0.4, { to: 180, vol: 0.12, type: "triangle", wobble: 30 }); noise(0.05, { freq: 1500, vol: 0.05 }); },
@@ -242,7 +249,19 @@ function stampSVG(st, { mark = null, tears = [] } = {}) {
   let holes = "";
   for (let x = 4; x <= 96; x += 8) holes += `<circle cx="${x}" cy="0" r="3"/><circle cx="${x}" cy="120" r="3"/>`;
   for (let y = 4; y <= 116; y += 8) holes += `<circle cx="0" cy="${y}" r="3"/><circle cx="100" cy="${y}" r="3"/>`;
-  const rips = tears.map((t) => `<polygon points="${tearPoly(t)}"/>`).join("");
+  let rips = tears.map((t) => `<polygon points="${tearPoly(t)}"/>`).join("");
+  // From the fourth tear on, cracks run from the edge into the stamp
+  tears.slice(3).forEach((t, i) => {
+    const along = 18 + t.p * 52;
+    let [x, y] = [[along, 0], [100, along + 10], [along, 120], [0, along + 10]][t.s];
+    const pts = [`${x},${y}`];
+    for (let k = 1; k <= 5; k++) {
+      x += (50 - x) * 0.2 + Math.sin(t.p * 40 + k * 2.3 + i) * 6;
+      y += (60 - y) * 0.2 + Math.cos(t.p * 31 + k * 1.7 + i) * 6;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    rips += `<polyline points="${pts.join(" ")}" fill="none" stroke="#000" stroke-width="1.8" stroke-linejoin="bevel"/>`;
+  });
   const name = c.name.toUpperCase();
   const fit = name.length > 12 ? ` textLength="76" lengthAdjust="spacingAndGlyphs"` : "";
   return `<svg class="stamp-svg" viewBox="0 0 100 120" overflow="visible" aria-hidden="true">
@@ -289,6 +308,10 @@ const SPECIALS = [
   { key: "legend", name: "LEGENDARY", emoji: "👑", pts: 5, text: "a famous stamp of philately", test: (x) => x.st.rarity === "legendary" },
   { key: "surgeon", name: "SURGEON", emoji: "✂️", pts: 3, text: "a flawless cut", test: (x) => x.cut >= 0.95 },
   { key: "shiny", name: "SHINY CARD", emoji: "🌟", pts: 5, text: "it came on a shiny postcard", test: (x) => !!x.shiny },
+  // Anti-specials: they cost points, and nothing caps how many
+  { key: "butcher", name: "BUTCHER", emoji: "🔪", pts: -5, text: "that was not a cut, that was a crime", test: (x) => x.cut < 0 },
+  { key: "confetti", name: "CONFETTI", emoji: "🎊", pts: -10, text: "more holes than stamp", test: (x) => x.tears >= 5 },
+  { key: "totalloss", name: "TOTAL LOSS", emoji: "💥", pts: -25, text: "the stamp is no more", test: (x) => x.tears >= DESTROY_AT },
 ];
 const SPECIAL = Object.fromEntries(SPECIALS.map((sp) => [sp.key, sp]));
 const COMBOS = [
@@ -301,21 +324,24 @@ const COMBOS = [
 // extra = { cut, to, today } from the card (old album copies have no cut: they count as a decent 0.8)
 function score(st, mark, tears, extra = {}) {
   const t = tears.length;
-  const cond = [35, 24, 13, 4][Math.min(t, 3)];
+  // 35, 24, 13, 4, then 8 points less for every further tear
+  const cond = t <= 3 ? [35, 24, 13, 4][t] : 4 - (t - 3) * 8;
   const cut = extra.cut == null ? 0.8 : extra.cut;
   const cutPts = Math.round(10 * cut);
   const luck = Math.max(0, 1 - Math.hypot(mark.ox / 46, mark.oy / 56));
   const luckPts = Math.round(20 * luck);
-  const x = { st, mark, luck, cut, to: extra.to, today: extra.today, shiny: extra.shiny };
+  const x = { st, mark, luck, cut, tears: t, to: extra.to, today: extra.today, shiny: extra.shiny };
   const sp = SPECIALS.filter((s) => s.test(x)).map((s) => s.key);
-  const spPts = Math.min(35, sp.reduce((n, k) => n + SPECIAL[k].pts, 0));
+  const good = sp.reduce((n, k) => n + Math.max(0, SPECIAL[k].pts), 0);
+  const bad = sp.reduce((n, k) => n + Math.min(0, SPECIAL[k].pts), 0);
+  const spPts = Math.min(35, good) + bad;
   const combo = COMBOS.find((c) => c.keys.every((k) => sp.includes(k))) || null;
   return { cond, tears: t, cut, cutPts, luck, luckPts, sp, spPts, combo, q: cond + cutPts + luckPts + spPts };
 }
 const gradeOf = (q) => GRADES.find(([min]) => q >= min);
-const stars = (n) => "★".repeat(n) + "☆".repeat(5 - n);
-const condName = (t) => ["Mint", "One tear", "Two tears", "Torn"][Math.min(t, 3)];
-const cutName = (c) => c >= 0.95 ? "flawless" : c >= 0.8 ? "neat" : c >= 0.55 ? "wobbly" : "ragged";
+const stars = (n) => n < 0 ? "💀".repeat(n === -1 ? 1 : 3) : "★".repeat(n) + "☆".repeat(5 - n);
+const condName = (t) => t >= DESTROY_AT ? "Destroyed" : t >= 6 ? "Confetti" : t >= 4 ? "Shredded" : ["Mint", "One tear", "Two tears", "Torn"][t];
+const cutName = (c) => c >= 0.95 ? "flawless" : c >= 0.8 ? "neat" : c >= 0.55 ? "wobbly" : c >= 0 ? "ragged" : "butchered";
 
 // ---------- Postcards ----------
 
@@ -356,6 +382,40 @@ const MODS = {
   crab: { emoji: "", name: "", chance: 0.07 },
 };
 
+// Every pen pal has their own handwriting and ink; every card its own paper, border, doodles and picture side
+const PENS = ["Caveat", "Patrick Hand", "Indie Flower", "Gochi Hand", "Kalam", "Shadows Into Light", "Reenie Beanie", "Nanum Pen Script", "Gloria Hallelujah", "Covered By Your Grace"];
+const PEN_INKS = ["#23305e", "#1d4f8a", "#3a2a6b", "#7a2a3a", "#1f5a3a", "#2b2b2b", "#8a3a1a", "#0f6a7a"];
+const DOODLES = ["❤️", "☀️", "🌺", "⭐", "🐟", "🌴", "😎", "🍕", "🐱", "🌈", "✈️", "🎈", "🍦", "🐚", "🦩", "🍉", "🌻", "🎵", "🙃", "👋"];
+const PAPERS = 7, BORDERS = 5, FRONTS = 4;
+
+function cardStyle(no, from) {
+  const r = seeded(hashStr(`style:${no}:${from}`));
+  const doodles = [];
+  const n = Math.floor(r() * 4);
+  for (let i = 0; i < n; i++) {
+    doodles.push({ e: DOODLES[Math.floor(r() * DOODLES.length)], x: Math.round(4 + r() * 50), y: Math.round(60 + r() * 34), r: Math.round(r() * 50 - 25), s: Math.round(5 + r() * 4) });
+  }
+  return {
+    paper: Math.floor(r() * PAPERS), border: Math.floor(r() * BORDERS), front: Math.floor(r() * FRONTS),
+    tilt: Math.round((r() * 3 - 1.5) * 10) / 10, stain: r() < 0.25 ? { x: Math.round(10 + r() * 70), y: Math.round(10 + r() * 70) } : null,
+    doodles,
+  };
+}
+
+function applyCardStyle(card) {
+  const st = card.style;
+  const pen = seeded(hashStr("pen:" + card.from));
+  postcard.style.setProperty("--pen", `"${PENS[Math.floor(pen() * PENS.length)]}"`);
+  postcard.style.setProperty("--pen-ink", PEN_INKS[Math.floor(pen() * PEN_INKS.length)]);
+  postcard.style.setProperty("--tilt", st.tilt + "deg");
+  postcard.dataset.paper = st.paper;
+  postcard.dataset.border = st.border;
+  postcard.dataset.front = st.front;
+  $("doodles").innerHTML = st.doodles.map((d) =>
+    `<span style="left:${d.x}%;top:${d.y}%;transform:rotate(${d.r}deg);font-size:${d.s}cqw">${d.e}</span>`).join("") +
+    (st.stain ? `<i class="stain" style="left:${st.stain.x}%;top:${st.stain.y}%"></i>` : "");
+}
+
 function makeCard(from, prev) {
   const f = BY_CODE[from];
   let to;
@@ -383,6 +443,9 @@ function makeCard(from, prev) {
   if (card.mods.includes("sticky")) card.glue = Math.round(card.glue * 1.4 * 100) / 100;
   if (card.mods.includes("wet")) card.glue = Math.round(card.glue * 0.65 * 100) / 100;
   card.shiny = card.mods.includes("shiny");
+  card.method = pickMethod();
+  card.loose = 0;
+  card.style = cardStyle(card.no, from);
   return card;
 }
 
@@ -395,19 +458,65 @@ let flipped = false;
 // The dotted tear-out line around the stamp, in stamp units (the stamp is 100 × 120)
 const CUT = { x0: -8, y0: -8, x1: 108, y1: 128 };
 const CUT_W = CUT.x1 - CUT.x0, CUT_H = CUT.y1 - CUT.y0, CUT_P = 2 * (CUT_W + CUT_H);
-const BINS = 42, BIN_NEED = 40;
+const BINS = 42, BIN_NEED = 39;
 // Corners are peeled one by one: top left, top right, bottom right, bottom left
 const CORNERS = [[0, 0], [100, 0], [100, 120], [0, 120]];
 const peel = {
   strain: 0, maxStrain: 0, active: false, x: 0, y: 0, t: 0, lastSound: 0, lastNag: 0,
   bins: [], devSum: 0, devLen: 0, inside: 0, grab: false,
-  bits: [], pull: 0, streak: 0, streakLevel: 0, snip: false, angle: 0, lastSnip: 0,
+  bits: [], pull: 0, streak: 0, streakLevel: 0, snip: false, angle: 0, lastSnip: 0, lastBin: null,
+  temp: 0, heating: false, marker: 0, mdir: 1, mspeed: 0, tdir: 0, trun: 0,
 };
 // Steady-hand streaks while cutting: units traced along the line without slipping off or rushing
 const STREAKS = [[70, "Steady!"], [180, "Smooth hands!"], [320, "Like butter! 🧈"]];
 
-const phase = () => !S.card ? "none" : S.card.done ? "done" : S.card.cut == null ? "cut" : "peel";
+// After the cut-out, each card picks one way to get the stamp off the paper
+const METHODS = {
+  corners: { name: "PEEL THE CORNERS", emoji: "🤏", weight: 3, hint: "② Peel it: drag from the glowing corner toward the middle, gently. Corner by corner." },
+  steam: { name: "STEAM IT", emoji: "♨️", weight: 2, hint: "② Steam it: hold down to heat the kettle. Keep the thermometer in the green zone. Too hot and it curls!" },
+  rhythm: { name: "WIGGLE IT LOOSE", emoji: "🎯", weight: 2, hint: "② Wiggle it: tap when the marker is in the green zone. It gets faster!" },
+  tickle: { name: "TICKLE IT OFF", emoji: "🪶", weight: 2, hint: "② Tickle it: rub quickly back and forth over the stamp until it laughs itself off the card." },
+};
+const methodOf = (card) => (card && METHODS[card.method] ? card.method : "corners");
+function pickMethod() {
+  const keys = Object.keys(METHODS);
+  let r = rand() * keys.reduce((n, k) => n + METHODS[k].weight, 0);
+  for (const k of keys) { r -= METHODS[k].weight; if (r <= 0) return k; }
+  return "corners";
+}
+
+const phase = () => !S.card ? "none" : S.card.done || S.card.destroyed ? "done" : S.card.cut == null ? "cut" : "peel";
 const activeCorner = () => S.card.corners.findIndex((c) => c < 1);
+
+// The picture side comes in a few layouts
+function frontHtml(card, st, f) {
+  const motif = look(st).motif;
+  const kind = card.style ? card.style.front : 0;
+  if (kind === 1) {
+    return `<div class="front-polaroid" style="--h:${card.hue}">
+      <div class="pola p1"><div class="pola-pic" style="--h:${card.hue}"><span>${motif}</span></div><i>${esc(f.city)}!</i></div>
+      <div class="pola p2"><div class="pola-pic" style="--h:${(card.hue + 140) % 360}"><span>${flag(f.code)}</span></div><i>wish you were here</i></div>
+      <div class="pola-title">${esc(f.name)}</div></div>`;
+  }
+  if (kind === 2) {
+    const letters = [...f.name.toUpperCase()].map((ch, i) => `<span style="--i:${i}">${esc(ch)}</span>`).join("");
+    return `<div class="front-retro" style="--h:${card.hue}">
+      <div class="retro-sun"></div><div class="retro-stripes"></div>
+      <div class="retro-greet"><small>Greetings from</small><b>${letters}</b></div><span class="retro-motif">${motif}</span></div>`;
+  }
+  if (kind === 3) {
+    return `<div class="front-night" style="--h:${card.hue}">
+      <span class="night-moon">🌙</span><span class="night-motif">${motif}</span>
+      <div class="greet"><small>Good night from</small><b>${esc(f.name)}</b><small>${esc(f.city)} ✨</small></div>
+      <span class="front-flag">${flag(f.code)}</span></div>`;
+  }
+  return `<div class="front-sky" style="--h:${card.hue}">
+      <span class="front-sun"></span>
+      <span class="front-motif">${motif}</span>
+      <div class="greet"><small>Greetings from</small><b>${esc(f.name)}</b><small>${esc(f.city)}</small></div>
+      <span class="front-flag">${flag(f.code)}</span>
+    </div>`;
+}
 
 function renderCard() {
   const card = S.card;
@@ -423,12 +532,7 @@ function renderCard() {
   $("to-country").innerHTML = `${esc(t.name.toUpperCase())} ${flagHtml(t.code)}`;
   stampEl.innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
   $("card-mark").innerHTML = cardMarkSVG(card.mark);
-  $("pc-front").innerHTML = `<div class="front-sky" style="--h:${card.hue}">
-      <span class="front-sun"></span>
-      <span class="front-motif">${look(st).motif}</span>
-      <div class="greet"><small>Greetings from</small><b>${esc(f.name)}</b><small>${esc(f.city)}</small></div>
-      <span class="front-flag">${flag(f.code)}</span>
-    </div>`;
+  $("pc-front").innerHTML = frontHtml(card, st, f);
   $("card-no").innerHTML = `Postcard #${card.no} · from ${flagHtml(f.code)} <b>${esc(f.person)}</b>, ${esc(f.city)}`;
   const mods = card.mods || [];
   $("card-mods").innerHTML = mods.filter((k) => MODS[k] && MODS[k].emoji)
@@ -441,8 +545,12 @@ function renderCard() {
 
   Object.assign(peel, {
     strain: 0, maxStrain: 0, active: false, bins: new Array(BINS).fill(false), devSum: 0, devLen: 0, inside: 0, grab: false,
-    bits: [], pull: 0, streak: 0, streakLevel: 0,
+    bits: [], pull: 0, streak: 0, streakLevel: 0, lastBin: null,
+    temp: 0, heating: false, marker: 0, mdir: 1, mspeed: 0.0009 * (1 + (STAMPS[card.stampId].year < 1900 ? 0.3 : 0)), tdir: 0, trun: 0,
   });
+  if (!card.method) card.method = "corners";
+  if (!card.style) card.style = cardStyle(card.no, card.from);
+  applyCardStyle(card);
   $("work-bits").innerHTML = "";
   drawScissors(null);
   requestAnimationFrame(fitMessage);
@@ -464,7 +572,7 @@ function setHint() {
   const ph = phase();
   $("hint").textContent = ph === "done" ? "Stamp's in the album. On to the next postcard!" :
     ph === "cut" ? "① Tear it out: trace the dotted line around the stamp, slowly. Don't cut into the stamp!" :
-    "② Peel it: drag from the glowing corner toward the middle, gently. Corner by corner.";
+    METHODS[methodOf(S.card)].hint;
   $("m-peel-label").textContent = ph === "cut" ? "CUT" : "PEEL";
 }
 
@@ -546,6 +654,8 @@ function renderWork() {
       const [nx, ny] = cutPoint(next * L + L / 2);
       html += `<text class="scissors" x="${f1(nx)}" y="${f1(ny + 3)}" text-anchor="middle">✂</text>`;
     }
+  } else if (ph === "peel" && methodOf(S.card) !== "corners") {
+    html += minigameSVG();
   } else if (ph === "peel") {
     const a = activeCorner();
     S.card.corners.forEach((c, i) => {
@@ -586,14 +696,15 @@ function stepBits(dt) {
   if (!peel.bits.length) return;
   for (const b of peel.bits) {
     b.age += dt;
-    b.vy += 0.0004 * dt;
+    if (!b.emoji) b.vy += 0.0004 * dt;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.r += b.vr * dt;
   }
   peel.bits = peel.bits.filter((b) => b.age < b.life);
-  $("work-bits").innerHTML = peel.bits.map((b) =>
-    `<rect x="${f1(b.x)}" y="${f1(b.y)}" width="${f1(b.w)}" height="${f1(b.w * 0.6)}" fill="${b.c}" opacity="${(1 - b.age / b.life).toFixed(2)}" transform="rotate(${Math.round(b.r)} ${f1(b.x)} ${f1(b.y)})"/>`).join("");
+  $("work-bits").innerHTML = peel.bits.map((b) => b.emoji
+    ? `<text class="laugh" x="${f1(b.x)}" y="${f1(b.y)}" opacity="${(1 - b.age / b.life).toFixed(2)}" text-anchor="middle">${b.emoji}</text>`
+    : `<rect x="${f1(b.x)}" y="${f1(b.y)}" width="${f1(b.w)}" height="${f1(b.w * 0.6)}" fill="${b.c}" opacity="${(1 - b.age / b.life).toFixed(2)}" transform="rotate(${Math.round(b.r)} ${f1(b.x)} ${f1(b.y)})"/>`).join("");
 }
 
 // The scissors follow your finger while you cut, pointing the way you go
@@ -605,7 +716,10 @@ function drawScissors(x, y, angle) {
 function progress() {
   const ph = phase();
   if (ph === "cut") return Math.min(1, peel.bins.filter(Boolean).length / BIN_NEED);
-  if (ph === "peel") return S.card.corners.reduce((n, c) => n + Math.min(1, c), 0) / 4;
+  if (ph === "peel") {
+    if (methodOf(S.card) !== "corners") return Math.min(1, S.card.loose || 0);
+    return S.card.corners.reduce((n, c) => n + Math.min(1, c), 0) / 4;
+  }
   return ph === "done" ? 1 : 0;
 }
 
@@ -616,11 +730,14 @@ function updateMeters() {
   $("strain-fill").style.width = Math.min(100, peel.strain) + "%";
   $("strain-fill").classList.toggle("hot", peel.strain > 65);
   const t = S.card ? S.card.tears.length : 0;
-  $("tears").textContent = t ? "✂".repeat(Math.min(t, 4)) : "♡";
+  const cond = t <= 3 ? [35, 24, 13, 4][t] : 4 - (t - 3) * 8;
+  $("tears").textContent = t ? `✂${t} ${cond > 0 ? "+" : ""}${cond}` : "♡";
+  $("tears").classList.toggle("neg", cond < 0);
   $("tears").title = t ? `${t} tear${t > 1 ? "s" : ""}: ${condName(t)}` : "No tears yet: mint";
   updateQuick();
   if (phase() !== "peel") return;
   stampEl.style.setProperty("--lift", (p / 100).toFixed(3));
+  stampEl.style.setProperty("--steam", methodOf(S.card) === "steam" ? peel.temp.toFixed(2) : 0);
   stampEl.classList.toggle("tense", peel.strain > 70);
 }
 
@@ -657,15 +774,21 @@ function cutStep(x, y, dist, speed) {
   const safe = 0.45 / Math.sqrt(frag);
   peel.strain += Math.max(0, speed - safe) * dist * 1.6 * frag;
   if (d < 16) { peel.devSum += d * dist; peel.devLen += dist; }
-  if (d < 6) {
+  if (d < 9) {
     const now = performance.now();
     if (now - peel.lastSound > 40) { sfx.rip(progress(), speed); peel.lastSound = now; }
     if (rand() < 0.35) spawnBits(x, y, 1);
-    if (speed > safe * 1.7) {
+    if (speed > safe * 2.4) {
       nag("Too fast! Tear it slowly");
       peel.streak = 0; peel.streakLevel = 0;
     } else {
       const b = Math.floor(s / (CUT_P / BINS)) % BINS;
+      // Bridge small skips between the last stretch you tore and this one
+      const gap = peel.lastBin == null ? 0 : (b - peel.lastBin + BINS) % BINS;
+      const back = peel.lastBin == null ? 0 : (peel.lastBin - b + BINS) % BINS;
+      if (gap > 1 && gap <= 3) for (let k = 1; k < gap; k++) peel.bins[(peel.lastBin + k) % BINS] = true;
+      if (back > 1 && back <= 3) for (let k = 1; k < back; k++) peel.bins[(b + k) % BINS] = true;
+      peel.lastBin = b;
       if (!peel.bins[b]) { peel.bins[b] = true; spawnBits(x, y, 3); renderWork(); }
       peel.streak += dist;
       const next = STREAKS[peel.streakLevel];
@@ -677,7 +800,7 @@ function cutStep(x, y, dist, speed) {
         if (peel.streakLevel === STREAKS.length) egg("butter", "Like butter: one long, perfectly steady cut");
       }
     }
-  } else if (d > 9) {
+  } else if (d > 12) {
     peel.streak = 0; peel.streakLevel = 0;
   }
   peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
@@ -689,7 +812,7 @@ function cutStep(x, y, dist, speed) {
 function finishCut() {
   const card = S.card;
   const dev = peel.devLen ? peel.devSum / peel.devLen : 0;
-  card.cut = Math.round(Math.max(0, Math.min(1, 1 - dev / 7)) * 100) / 100;
+  card.cut = Math.round(Math.max(-1, Math.min(1, 1 - dev / 10)) * 100) / 100;
   peel.active = false;
   peel.strain = 0;
   drawScissors(null);
@@ -706,6 +829,8 @@ function finishCut() {
   spot.classList.remove("popout"); void spot.offsetWidth; spot.classList.add("popout");
   setTimeout(() => spot.classList.remove("popout"), 800);
   if (hasMod("crab")) setTimeout(stowaway, 500);
+  const m = METHODS[methodOf(card)];
+  setTimeout(() => { toast(`${m.emoji} ${m.name}!`, "good"); sfx.pop(); }, hasMod("crab") ? 1600 : 700);
   save();
   setHint();
   renderWork();
@@ -729,6 +854,7 @@ function cornerStep(x, y, dx, dy, dist, speed) {
     // The flap stretches with your pull and springs back when you let go
     peel.pull = Math.min(12, peel.pull + dist * dot * 0.18);
     rustle(speed);
+    if (rand() < 0.08) jelly();
     if (rand() < 0.15) spawnBits(cx + (50 - cx) * 0.2, cy + (60 - cy) * 0.2, 1, { colors: ["#f3e3a8", "#fff6d0"] });
   } else {
     peel.strain += dist * 0.4;
@@ -750,6 +876,7 @@ function cornerDone(a) {
   spawnBits(cx + (50 - cx) * 0.25, cy + (60 - cy) * 0.25, 10, { colors: ["#f3e3a8", "#fff6d0", "#fbf6ea"], spread: 1.5 });
   tone(700 + a * 150, 0.15, { type: "triangle" });
   save();
+  jelly(true);
   if (a === 3) finishPeel();
   else toast(["Corner one!", "Two down!", "One to go!"][a], "good");
 }
@@ -758,8 +885,9 @@ function tear(msg) {
   const card = S.card;
   card.tears.push({ s: ri(0, 3), p: Math.round(rand() * 100) / 100 });
   peel.strain = 35;
-  sfx.tear();
-  toast(msg || pick(TEAR_QUIPS), "bad");
+  const n = card.tears.length;
+  sfx.tear(n);
+  toast(msg ? msg : n <= TEAR_JOKES.length ? TEAR_JOKES[n - 1] : pick(TEAR_QUIPS), "bad");
   const st = STAMPS[card.stampId];
   stampEl.innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
   // Shreds of the stamp itself fly off where it tore
@@ -770,7 +898,26 @@ function tear(msg) {
   peel.streak = 0; peel.streakLevel = 0;
   postcard.classList.remove("shake"); void postcard.offsetWidth; postcard.classList.add("shake");
   save();
-  if (card.tears.length >= 4) egg("confetti", "Confetti maker: that stamp is more hole than stamp");
+  if (n >= 4) egg("confetti", "Confetti maker: that stamp is more hole than stamp");
+  if (n >= DESTROY_AT) destroyStamp();
+}
+
+// Too many tears: the stamp falls apart in your hands, and goes into the album anyway
+function destroyStamp() {
+  const card = S.card;
+  if (card.done || card.destroyed) return;
+  const st = STAMPS[card.stampId];
+  card.destroyed = true;
+  card.cut = Math.min(card.cut ?? -0.5, -0.5);
+  card.corners = [1, 1, 1, 1];
+  peel.active = false;
+  peel.maxStrain = 100;
+  stampEl.classList.add("crumble");
+  spawnBits(50, 60, 60, { colors: [look(st).ink, look(st).tint, "#fbf6ea", "#222"], spread: 3, up: 0.06 });
+  sfx.sadTrombone();
+  toast("💥 KAPUTT. The stamp has left the building.", "bad");
+  egg("destroyer", "Destroyer: you tore a stamp to pieces");
+  setTimeout(() => { stampEl.classList.remove("crumble"); finishPeel(); }, 900);
 }
 
 function isToday(mark) {
@@ -793,7 +940,7 @@ function finishPeel() {
   else status = "DUPLICATE";
   if (!old || sc.q > old.q) {
     S.album[st.id] = {
-      q: sc.q, tears: card.tears, mark: card.mark, cut: card.cut, to: card.to, today: card.today, shiny: card.shiny, sp: sc.sp,
+      q: sc.q, tears: card.tears, mark: card.mark, cut: card.cut, to: card.to, today: card.today, shiny: card.shiny, destroyed: !!card.destroyed, sp: sc.sp,
       n: (old ? old.n : 0) + 1, from: card.from, t: Date.now(),
     };
   } else old.n++;
@@ -814,15 +961,17 @@ function finishPeel() {
   const result = () => { if (S.card === card) showResult(st, sc, status, old); };
   setTimeout(() => {
     if (S.card !== card) return;
-    if (sc.sp.length) playAlerts(sc, result);
+    if (sc.sp.length || sc.q < 0) playAlerts(sc, result);
     else result();
   }, 650);
 }
 
 // Crazy alerts: one loud banner per special, then the combo (if any) even louder. A tap skips them.
 function playAlerts(sc, done) {
-  const items = sc.sp.map((k) => SPECIAL[k]);
-  if (sc.combo) items.push({ name: sc.combo.name, emoji: sc.combo.emoji, text: "COMBO!", mega: true });
+  // Good news first, then the bad news
+  const items = sc.sp.map((k) => SPECIAL[k]).sort((a, b) => (b.pts > 0) - (a.pts > 0));
+  if (sc.combo) items.splice(items.filter((it) => it.pts > 0).length, 0, { name: sc.combo.name, emoji: sc.combo.emoji, text: "COMBO!", pts: 0, mega: true });
+  if (sc.q < 0) items.push({ name: "PHILATELIC CATASTROPHE", emoji: "☠️", text: pick(DOOM_JOKES), pts: 0, mega: true, doom: true });
   const el = $("alert");
   let i = 0, timer = 0;
   const finish = () => {
@@ -836,17 +985,31 @@ function playAlerts(sc, done) {
     if (i >= items.length) return finish();
     const it = items[i++];
     el.hidden = false;
-    el.className = "alert" + (it.mega ? " mega" : "");
+    const doom = it.doom || it.pts < 0;
+    el.className = "alert" + (it.mega ? " mega" : "") + (doom ? " doom" : "");
     el.innerHTML = `<div class="alert-rays"></div><div class="alert-inner">
       <span class="alert-emoji">${it.emoji}</span><b class="alert-name">${esc(it.name)}</b>
-      <span class="alert-text">${esc(it.text)}${it.pts ? ` · +${it.pts}` : ""}</span></div>`;
+      <span class="alert-text">${esc(it.text)}${it.pts ? ` · ${it.pts > 0 ? "+" : ""}${it.pts}` : ""}</span></div>`;
     document.body.classList.remove("quake"); void document.body.offsetWidth; document.body.classList.add("quake");
-    fanfare(it.mega);
-    confetti(it.mega ? 120 : 45);
+    if (doom) { sfx.sadTrombone(); skulls(it.mega ? 40 : 14); }
+    else { fanfare(it.mega); confetti(it.mega ? 120 : 45); }
     timer = setTimeout(show, it.mega ? 2300 : 1400);
   };
   el.onclick = finish;
   show();
+}
+// Falling skulls and broken hearts instead of confetti
+function skulls(n) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("i");
+    c.className = "confetti skull";
+    c.textContent = pick(["💀", "💔", "🪦", "😭", "🗑️"]);
+    c.style.left = rand() * 100 + "vw";
+    c.style.animationDuration = 2 + rand() * 2 + "s";
+    c.style.animationDelay = rand() * 0.5 + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
 }
 function fanfare(mega) {
   [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, { type: "triangle", vol: 0.08, delay: i * 0.07 }));
@@ -863,11 +1026,14 @@ function showResult(st, sc, status, old) {
   $("r-stamp").innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
   $("r-title").textContent = st.desc;
   $("r-id").innerHTML = `#${st.id} · ${flagHtml(st.code)} ${esc(BY_CODE[st.code].name)} · <span class="rar ${st.rarity}">${RARITY[st.rarity].name}</span>`;
-  $("r-grade").innerHTML = `<span class="stars">${stars(gstars)}</span> <b>${gname}</b> <span class="q">${sc.q}/100</span>` +
-    (status === "DUPLICATE" ? `<small>your album copy: ${old.q}/100, kept</small>` : status === "BETTER COPY!" ? `<small>was ${old.q}/100</small>` : "");
+  $("r-grade").innerHTML = `<span class="stars">${stars(gstars)}</span> <b>${gname}</b> <span class="q${sc.q < 0 ? " neg" : ""}">${sc.q}/100</span>` +
+    (status === "DUPLICATE" ? `<small>your album copy: ${old.q}/100, kept</small>` : status === "BETTER COPY!" ? `<small>was ${old.q}/100</small>` : "") +
+    `<small class="quip">“${esc(pick(GRADE_QUIPS[gname]))}”</small>`;
   $("r-rows").innerHTML = breakdownRows(st, card.mark, sc);
+  $("result").classList.toggle("doom", sc.q < 0);
   openModal("result");
-  sfx.chime(gstars);
+  if (gstars < 0) sfx.sadTrombone(); else sfx.chime(gstars);
+  if (sc.q < 0) egg("catastrophe", "Philatelic catastrophe: quality below zero");
   if (gstars >= 4) { toast(gname + "!", "good"); confetti(gstars * 12); }
   if (sc.q >= 90) egg("gem", "Gem hunter: a GEM MINT stamp");
   if (sc.sp.includes("home") && sc.sp.includes("firstday")) egg("dream", "Philatelist's dream: home seal on the first day");
@@ -915,7 +1081,7 @@ function quickChance(card) {
   let c = 0.95 - (NOW_YEAR - st.year) * 0.0032 - (card.glue - 0.8) * 0.45 - card.tears.length * 0.08 -
     { legendary: 0.15, rare: 0.06, uncommon: 0.02, common: 0 }[st.rarity];
   if (card.cut != null) c += 0.08;
-  c += (card.corners || []).filter((k) => k >= 1).length * 0.03;
+  c += (card.corners || []).filter((k) => k >= 1).length * 0.03 + (card.loose || 0) * 0.12;
   if (card.mods && card.mods.includes("sandy")) c -= 0.05;
   return Math.max(0.05, Math.min(0.95, c));
 }
@@ -955,6 +1121,7 @@ function quickRip() {
     const r = Math.round(roll * 100), need = Math.round(chance * 100);
     sfx.whoosh();
     card.corners = [1, 1, 1, 1];
+    card.loose = 1;
     if (ok) {
       card.cut = Math.min(card.cut ?? 0.6, 0.6);
       toast(`⚡ Clean rip! rolled ${r}, needed under ${need}`, "good");
@@ -963,6 +1130,7 @@ function quickRip() {
     } else {
       const hits = ri(1, 3);
       for (let i = 0; i < hits; i++) card.tears.push({ s: ri(0, 3), p: Math.round(rand() * 100) / 100 });
+      if (card.tears.length >= DESTROY_AT) card.destroyed = true;
       card.cut = Math.min(card.cut ?? 0.3, 0.3);
       sfx.tear();
       toast(`💥 RRRIP! rolled ${r}, needed under ${need}`, "bad");
@@ -1009,6 +1177,162 @@ function stowaway() {
   egg("stowaway", "Stowaway: a tiny crab was hiding under the stamp");
 }
 
+// ---------- Removal minigames ----------
+
+// A bouncy jelly wobble of the stamp (the picture only, so its corners stay where they are)
+function jelly(big) {
+  stampEl.classList.remove("jelly", "jelly-big");
+  void stampEl.offsetWidth;
+  stampEl.classList.add(big ? "jelly-big" : "jelly");
+}
+
+function loosen(amount) {
+  const card = S.card;
+  card.loose = Math.min(1, (card.loose || 0) + amount);
+  if (card.loose >= 1) {
+    peel.heating = false;
+    jelly(true);
+    sfx.snap();
+    spawnBits(50, 60, 20, { colors: ["#f3e3a8", "#fff6d0", "#fff"], spread: 2, up: 0.05 });
+    finishPeel();
+  }
+}
+
+function minigameDown(m, x, y) {
+  if (m === "steam") peel.heating = true;
+  else if (m === "rhythm") rhythmTap();
+  else if (m === "tickle") Object.assign(peel, { tdir: 0, trun: 0 });
+}
+
+function keyMinigame(m, repeat) {
+  if (m === "steam") peel.heating = true;
+  else if (m === "rhythm" && !repeat) rhythmTap();
+  else if (m === "tickle") tickleStep(50, 60, (peel.tdir || 1) * -6, 6);
+}
+
+// ♨️ Steam: hold to heat. The stamp loosens only while the thermometer sits in the green zone.
+function steamZone(card) {
+  if (!card.zone) {
+    const lo = 0.45 + rand() * 0.2;
+    card.zone = [Math.round(lo * 100) / 100, Math.round((lo + 0.2) * 100) / 100];
+  }
+  return card.zone;
+}
+
+// 🎯 Rhythm: a marker swings along a bar; tap while it is in the zone
+function rhythmTap() {
+  const card = S.card;
+  const hits = card.hits || 0;
+  const half = Math.max(0.05, 0.1 - hits * 0.012);
+  if (Math.abs(peel.marker - 0.5) < half) {
+    card.hits = hits + 1;
+    peel.mspeed *= 1.22;
+    tone(520 + hits * 90, 0.25, { type: "triangle", vol: 0.1, wobble: 30 });
+    toast(pick(["Nice!", "Wiggle!", "Boing!", "Loosening!", "Groovy!"]), "good");
+    spawnBits(50, 60, 8, { spread: 1.6 });
+    jelly(true);
+    loosen(0.2);
+  } else {
+    peel.strain += 24;
+    peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
+    tone(160, 0.25, { to: 110, vol: 0.1, wobble: 20 });
+    toast(pick(["Missed! 🙃", "Nope!", "Off-beat!", "The stamp laughs at you"]), "bad");
+    jelly();
+    if (peel.strain >= 100) tear();
+  }
+  updateMeters();
+}
+
+// 🪶 Tickle: every quick change of direction tickles it a bit looser
+function tickleStep(x, y, dx, dist) {
+  const dir = Math.sign(dx);
+  if (!dir) return;
+  if (peel.tdir && dir !== peel.tdir && (peel.trun || 0) > 3) {
+    const before = S.card.loose || 0;
+    loosen(0.03);
+    jelly();
+    const now = performance.now();
+    if (now - peel.lastSound > 90) {
+      peel.lastSound = now;
+      tone(900 + rand() * 500, 0.09, { type: "triangle", vol: 0.06, wobble: 80 });
+    }
+    if (rand() < 0.4) peel.bits.push({ x: 50 + (rand() - 0.5) * 60, y: 50 + (rand() - 0.5) * 60, vx: 0, vy: -0.03, r: 0, vr: 0, age: 0, life: 700, w: 0, c: "", emoji: pick(["😆", "🤣", "hihi", "haha", "😂"]) });
+    const after = S.card.loose || 0;
+    for (const [at, msg] of [[0.25, "hehe…"], [0.5, "HAHA STOP"], [0.75, "I can't— 🤣"]]) if (before < at && after >= at) toast(msg, "good");
+    peel.trun = 0;
+  }
+  if (dir !== peel.tdir) peel.trun = 0;
+  peel.tdir = dir;
+  peel.trun = (peel.trun || 0) + dist;
+  $("work-cursor").innerHTML = `<text class="feather" x="${f1(x)}" y="${f1(y)}" text-anchor="middle" dominant-baseline="central">🪶</text>`;
+}
+
+function minigameStep(dt) {
+  if (phase() !== "peel" || flipped) return;
+  const m = methodOf(S.card);
+  if (m === "steam") {
+    const [lo, hi] = steamZone(S.card);
+    peel.temp = Math.max(0, Math.min(1, peel.temp + (peel.heating ? dt * 0.00045 : -dt * 0.0003)));
+    if (peel.temp >= lo && peel.temp <= hi) {
+      if (rand() < dt * 0.02) spawnBits(20 + rand() * 60, 118, 1, { colors: ["#ffffff", "#e8f6ff"], spread: 0.4, up: 0.09 });
+      loosen(dt * 0.00022);
+    } else if (peel.temp > hi + 0.06) {
+      peel.strain += dt * 0.07;
+      peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
+      nag("Too hot! It's curling!");
+      if (peel.strain >= 100) tear("♨️ it cooked!");
+    }
+    renderWork();
+    updateMeters();
+  } else if (m === "rhythm") {
+    if (!peel.mspeed) peel.mspeed = 0.0009;
+    peel.marker += peel.mdir * peel.mspeed * dt;
+    if (peel.marker > 1) { peel.marker = 1; peel.mdir = -1; }
+    if (peel.marker < 0) { peel.marker = 0; peel.mdir = 1; }
+    renderWork();
+  }
+}
+
+function minigameSVG() {
+  const card = S.card;
+  const m = methodOf(card);
+  const loose = card.loose || 0;
+  let html = "";
+  // Every minigame lifts all four corners a little as the stamp gets looser
+  if (loose > 0) {
+    CORNERS.forEach(([cx, cy]) => {
+      const k = 3 + loose * 14, sx = cx ? -1 : 1, sy = cy ? -1 : 1;
+      html += `<polygon class="residue" points="${cx},${cy} ${f1(cx + sx * k)},${cy} ${cx},${f1(cy + sy * k)}"/>`;
+      html += `<polygon class="curl" points="${f1(cx + sx * k)},${cy} ${cx},${f1(cy + sy * k)} ${f1(cx + sx * k)},${f1(cy + sy * k)}"/>`;
+    });
+  }
+  if (m === "steam") {
+    const [lo, hi] = steamZone(card);
+    const H = 112, y0 = 4;
+    html += `<rect class="thermo" x="103" y="${y0}" width="7" height="${H}" rx="3.5"/>
+      <rect class="thermo-zone" x="103" y="${f1(y0 + H * (1 - hi))}" width="7" height="${f1(H * (hi - lo))}"/>
+      <rect class="thermo-fill${peel.temp > hi ? " hot" : ""}" x="104.5" y="${f1(y0 + H * (1 - peel.temp))}" width="4" height="${f1(H * peel.temp)}" rx="2"/>
+      <circle class="thermo-bulb${peel.temp > hi ? " hot" : ""}" cx="106.5" cy="${y0 + H + 4}" r="5"/>
+      <text class="kettle${peel.heating ? " on" : ""}" x="50" y="131" text-anchor="middle">♨️</text>`;
+    if (peel.heating) {
+      for (let i = 0; i < 3; i++) {
+        const sx = 30 + i * 20, ph = performance.now() / 180 + i;
+        html += `<path class="steam" d="M${sx} 124 q${f1(Math.sin(ph) * 4)} -8 0 -16 q${f1(-Math.sin(ph) * 4)} -8 0 -16"/>`;
+      }
+    }
+  } else if (m === "rhythm") {
+    const hits = card.hits || 0;
+    const half = Math.max(0.05, 0.1 - hits * 0.012);
+    html += `<rect class="rbar" x="0" y="123" width="100" height="7" rx="3.5"/>
+      <rect class="rzone" x="${f1((0.5 - half) * 100)}" y="123" width="${f1(half * 200)}" height="7" rx="2"/>
+      <rect class="rmark" x="${f1(peel.marker * 100 - 1.5)}" y="120" width="3" height="13" rx="1.5"/>
+      <text class="rhits" x="50" y="-4" text-anchor="middle">${"●".repeat(hits)}${"○".repeat(Math.max(0, 5 - hits))}</text>`;
+  } else if (m === "tickle") {
+    html += `<text class="tickle-hint" x="50" y="-4" text-anchor="middle">⇠ rub rub rub ⇢</text>`;
+  }
+  return html;
+}
+
 // ---------- Cutting and peeling input ----------
 
 function toUnits(e) {
@@ -1024,9 +1348,12 @@ workEl.addEventListener("pointerdown", (e) => {
   const [x, y] = toUnits(e);
   Object.assign(peel, { active: true, x, y, t: performance.now(), inside: 0 });
   if (ph === "peel") {
-    const [cx, cy] = CORNERS[activeCorner()];
-    peel.grab = Math.hypot(x - cx, y - cy) < 26;
-    if (!peel.grab) nag("Start at the glowing corner");
+    const [cx, cy] = CORNERS[Math.max(0, activeCorner())];
+    const m = methodOf(S.card);
+    if (m === "corners") {
+      peel.grab = Math.hypot(x - cx, y - cy) < 34;
+      if (!peel.grab) nag("Start at the glowing corner");
+    } else minigameDown(m, x, y);
   }
 });
 workEl.addEventListener("pointermove", (e) => {
@@ -1044,11 +1371,16 @@ workEl.addEventListener("pointermove", (e) => {
     drawScissors(x, y, peel.angle);
     cutStep(x, y, dist, dist / dt);
   }
-  else if (phase() === "peel") cornerStep(x, y, dx, dy, dist, dist / dt);
+  else if (phase() === "peel") {
+    if (methodOf(S.card) === "corners") cornerStep(x, y, dx, dy, dist, dist / dt);
+    else if (methodOf(S.card) === "tickle") tickleStep(x, y, dx, dist);
+  }
 });
 const stopPeel = () => {
   peel.active = false;
   peel.grab = false;
+  peel.heating = false;
+  $("work-cursor").innerHTML = "";
   drawScissors(null);
   if (phase() === "cut") renderWork();
 };
@@ -1061,23 +1393,31 @@ stampEl.addEventListener("keydown", (e) => {
   audio();
   const ph = phase();
   if (flipped || (ph !== "cut" && ph !== "peel")) return;
-  peel.strain += e.repeat ? 28 : 6;
-  peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
-  rustle(0.2);
-  if (peel.strain >= 100) tear();
+  const game = ph === "peel" && methodOf(S.card) !== "corners";
+  if (!game) {
+    peel.strain += e.repeat ? 28 : 6;
+    peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
+    rustle(0.2);
+    if (peel.strain >= 100) tear();
+  }
+  if (S.card.done || S.card.destroyed) return;
   if (ph === "cut") {
     const b = peel.bins.indexOf(false);
     if (b >= 0) peel.bins[b] = true;
     peel.devSum += 20; peel.devLen += 10;
     if (peel.bins.filter(Boolean).length >= BIN_NEED) finishCut();
-  } else {
+  } else if (methodOf(S.card) === "corners") {
     const a = activeCorner();
     S.card.corners[a] = Math.min(1, S.card.corners[a] + 0.08);
+    jelly();
     if (S.card.corners[a] >= 1) cornerDone(a);
+  } else {
+    keyMinigame(methodOf(S.card), e.repeat);
   }
   renderWork();
   updateMeters();
 });
+stampEl.addEventListener("keyup", () => { peel.heating = false; });
 
 let lastFrame = performance.now();
 function frame(now) {
@@ -1093,6 +1433,7 @@ function frame(now) {
     renderWork();
   }
   stepBits(dt);
+  minigameStep(dt);
   gimmickStep(dt);
   ballStep(dt);
   requestAnimationFrame(frame);
@@ -1119,7 +1460,7 @@ function slotHtml(st) {
   const rec = st && S.album[st.id];
   if (!rec) return `<div class="slot unknown" aria-label="Unknown stamp">?</div>`;
   const [, gname, gs] = gradeOf(rec.q);
-  return `<button class="slot" type="button" data-id="${st.id}" title="${esc(st.desc)} · ${gname}">
+  return `<button class="slot${rec.destroyed ? " wrecked" : ""}" type="button" data-id="${st.id}" title="${esc(st.desc)} · ${gname}">
     ${stampSVG(st, { mark: rec.mark, tears: rec.tears })}
     <span class="slot-id">${st.id}</span>
     <span class="slot-q g${gs}">${stars(gs)}</span>
@@ -1176,7 +1517,7 @@ function renderAlbum() {
     // A stamp shows up under every special its album copy has
     for (const sp of SPECIALS) {
       const list = have.filter((st) => (S.album[st.id].sp || []).includes(sp.key)).sort((x, y) => S.album[y.id].q - S.album[x.id].q);
-      html += `<section class="sec"><h3>${sp.emoji} ${sp.name} <small>${sp.text} · +${sp.pts} · ${list.length}</small></h3>
+      html += `<section class="sec"><h3>${sp.emoji} ${sp.name} <small>${sp.text} · ${sp.pts > 0 ? "+" : ""}${sp.pts} · ${list.length}</small></h3>
         <div class="grid">${list.length ? list.map(slotHtml).join("") : `<div class="slot unknown">?</div>`}</div></section>`;
     }
     const plain = have.filter((st) => !(S.album[st.id].sp || []).length);
@@ -1273,7 +1614,7 @@ $("help-grades").innerHTML = GRADES.map(([min, name, gs]) => `<span><span class=
 // ---------- The beach and its secrets ----------
 
 const EGGS = ["sun", "shades", "volley10", "volley25", "crab", "gull", "bottle", "shells", "castle", "logo", "aloha", "pennytyped",
-  "gem", "dream", "zen", "penny", "answer", "nightowl", "umbrella", "confetti", "sos", "icecream", "flipflop", "palm", "butter", "stowaway", "lucky"];
+  "gem", "dream", "zen", "penny", "answer", "nightowl", "umbrella", "confetti", "sos", "icecream", "flipflop", "palm", "butter", "stowaway", "lucky", "destroyer", "catastrophe"];
 const BOTTLE_NOTES = [
   "The sun has a secret. Click it. A lot.",
   "There are five shells hidden on this beach.",

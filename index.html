@@ -8,8 +8,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' fill='%23fdf6e3' stroke='%239b2335' stroke-dasharray='2 1'/%3E%3Ccircle cx='9' cy='9' r='4' fill='none' stroke='%231d2d6b'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Caveat:wght@500;700&family=Special+Elite&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.2.0">
+  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Caveat:wght@500;700&family=Special+Elite&family=Patrick+Hand&family=Indie+Flower&family=Gochi+Hand&family=Kalam&family=Shadows+Into+Light&family=Reenie+Beanie&family=Nanum+Pen+Script&family=Gloria+Hallelujah&family=Covered+By+Your+Grace&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2.3.0">
 </head>
 <body>
   <div class="beach" aria-hidden="true">
@@ -67,6 +67,7 @@
     <div class="pc-wrap">
       <div id="postcard" class="postcard">
         <div class="face back">
+          <div id="doodles" class="doodles" aria-hidden="true"></div>
           <div class="pc-message"><p id="pc-text" class="hand"></p></div>
           <div class="pc-divider" aria-hidden="true"></div>
           <div class="pc-right">
@@ -154,6 +155,8 @@
         <li><b>Postcards arrive</b> from a chain of pen pals, one in every country of the world. Each card goes to the next country, and its pen pal writes the next card.</li>
         <li><b>① Tear it out.</b> Trace the dotted line around the stamp, slowly. Rushing builds up <b>strain</b> and at full strain the stamp tears; drawing across the stamp cuts into it. The closer you stay to the line, the cleaner the cut.</li>
         <li><b>② Peel it.</b> Drag from the glowing corner toward the middle, a short gentle stroke at a time, then the next corner. Pulling the wrong way strains it too. Old stamps are more fragile.</li>
+        <li><b>Every card picks a minigame</b> for step ②: 🤏 peel the corners, ♨️ steam it (hold to heat, stay in the green zone), 🎯 wiggle it loose (tap in the zone, it speeds up) or 🪶 tickle it off (rub back and forth fast).</li>
+        <li><b>Too many tears</b> and quality goes below zero. At 8 tears the stamp falls apart completely: a philatelic catastrophe, filed in your album forever.</li>
         <li><b>⚡ Quick rip</b> skips all that: one yank with the success chance shown on the button. Old, rare, glued-hard or already torn stamps have worse odds. Success gives a rushed but whole stamp; failure tears it.</li>
         <li><b>Cards can come with gimmicks:</b> 🍯 extra sticky, 💧 wet (peels easily), 💨 windy (gusts tug at it), 🏖️ sandy (scratchy), 🌟 shiny (a special!). And sometimes something lives under the stamp.</li>
         <li><b>The stamp</b> comes from the card's country, and its release year is real. Its id is the country code and that year, like <b>GB-1840</b>.</li>
@@ -176,7 +179,7 @@
   <div id="alert" class="alert" hidden role="alert"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script src="data.js?v=2.2.0"></script>
-  <script src="script.js?v=2.2.0"></script>
+  <script src="data.js?v=2.3.0"></script>
+  <script src="script.js?v=2.3.0"></script>
 </body>
 </html>
