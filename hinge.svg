@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" class="hinge-svg" role="img" aria-label="Mr. Hinge, an old philatelist with a monocle, a huge white moustache and a stamp stuck to his forehead">
+  <style>
+    .m { display: none; }
+    svg:not([data-mood]) .m-neutral, [data-mood="neutral"] .m-neutral, [data-mood="happy"] .m-happy, [data-mood="suspicious"] .m-suspicious,
+    [data-mood="shocked"] .m-shocked, [data-mood="sad"] .m-sad, [data-mood="crying"] .m-crying { display: inline; }
+    .m path[stroke="#f4f1ea"] { filter: drop-shadow(0 0 .7px #5a3a22) drop-shadow(0 0 .7px #5a3a22); }
+    .monocle { transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 118px 92px; }
+    [data-mood="shocked"] .monocle { transform: translate(10px, 34px) rotate(35deg); }
+    .tear-l, .tear-r { animation: drip .8s ease-in infinite; }
+    @keyframes drip { 50% { transform: translateY(3px); } }
+  </style>
+  <!-- 70s sunburst behind him -->
+  <circle cx="100" cy="100" r="95" fill="#d9622b"/>
+  <circle cx="100" cy="100" r="47.5" fill="none" stroke="#e8a33d" stroke-width="95" stroke-dasharray="12.44 12.44"/>
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#5a3a22" stroke-width="4"/>
+
+  <!-- Cardigan, shirt, polka-dot bow tie -->
+  <path d="M28 222 Q32 162 100 150 Q168 162 172 222 Z" fill="#8a9a3b" stroke="#5a3a22" stroke-width="3"/>
+  <path d="M78 152 L100 196 L122 152 Z" fill="#f8ecd2" stroke="#5a3a22" stroke-width="2.5"/>
+  <circle cx="100" cy="204" r="3" fill="#e8a33d" stroke="#5a3a22" stroke-width="1.5"/>
+  <circle cx="100" cy="216" r="3" fill="#e8a33d" stroke="#5a3a22" stroke-width="1.5"/>
+  <rect x="88" y="132" width="24" height="24" fill="#f1c7a0" stroke="#5a3a22" stroke-width="2.5"/>
+  <path d="M100 160 L80 150 L80 172 Z M100 160 L120 150 L120 172 Z" fill="#b8442f" stroke="#5a3a22" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="100" cy="160" r="5" fill="#b8442f" stroke="#5a3a22" stroke-width="2.5"/>
+  <circle cx="86" cy="157" r="1.8" fill="#f8ecd2"/><circle cx="87" cy="166" r="1.8" fill="#f8ecd2"/>
+  <circle cx="114" cy="157" r="1.8" fill="#f8ecd2"/><circle cx="113" cy="166" r="1.8" fill="#f8ecd2"/>
+
+  <!-- Ears and wild white hair tufts -->
+  <ellipse cx="52" cy="98" rx="10" ry="14" fill="#f1c7a0" stroke="#5a3a22" stroke-width="2.5"/>
+  <ellipse cx="148" cy="98" rx="10" ry="14" fill="#f1c7a0" stroke="#5a3a22" stroke-width="2.5"/>
+  <path d="M50 82 q-16 -2 -16 -16 q6 8 12 6 q-12 -12 -2 -22 q0 12 8 12 q-6 -12 4 -18 q2 14 10 18 z" fill="#f4f1ea" stroke="#5a3a22" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M150 82 q16 -2 16 -16 q-6 8 -12 6 q12 -12 2 -22 q0 12 -8 12 q6 -12 -4 -18 q-2 14 -10 18 z" fill="#f4f1ea" stroke="#5a3a22" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M44 108 q-8 4 -10 12 q6 -4 10 -2 q-6 6 -4 12 q4 -8 10 -10 z" fill="#f4f1ea" stroke="#5a3a22" stroke-width="2"/>
+  <path d="M156 108 q8 4 10 12 q-6 -4 -10 -2 q6 6 4 12 q-4 -8 -10 -10 z" fill="#f4f1ea" stroke="#5a3a22" stroke-width="2"/>
+
+  <!-- The big bald head, polished to a shine -->
+  <ellipse cx="100" cy="92" rx="48" ry="54" fill="#f1c7a0" stroke="#5a3a22" stroke-width="3"/>
+  <ellipse cx="82" cy="54" rx="13" ry="6" fill="#fff" opacity=".55" transform="rotate(-22 82 54)"/>
+  <circle cx="96" cy="47" r="2.5" fill="#fff" opacity=".6"/>
+  <!-- A stamp stuck on his forehead. He hasn't noticed. -->
+  <g transform="rotate(14 118 52)">
+    <rect x="108" y="40" width="19" height="23" fill="#f8ecd2" stroke="#5a3a22" stroke-width="1.6" stroke-dasharray="2 1.3"/>
+    <rect x="111" y="43" width="13" height="17" fill="#b8442f"/>
+    <path d="M117.5 49 c-2 -3 -6 -1 -4 2 l4 4 l4 -4 c2 -3 -2 -5 -4 -2z" fill="#f8ecd2"/>
+  </g>
+  <ellipse class="blush" cx="70" cy="114" rx="9" ry="5" fill="#e8977a" opacity=".55"/>
+  <ellipse class="blush" cx="130" cy="114" rx="9" ry="5" fill="#e8977a" opacity=".55"/>
+
+  <!-- Moods: only the group matching data-mood is shown -->
+  <g class="m m-neutral">
+    <path d="M70 76 q12 -9 24 -2" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M106 70 q13 -10 26 0" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="82" cy="92" r="4.5" fill="#3a2414"/><circle cx="118" cy="92" r="7.5" fill="#3a2414"/><circle cx="120.5" cy="89.5" r="2.4" fill="#fff"/>
+    <path d="M92 136 q8 4 16 0" fill="none" stroke="#5a3a22" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g class="m m-happy">
+    <path d="M68 72 q13 -12 26 -4" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M106 68 q13 -12 27 -2" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M75 94 q7 -9 14 0" fill="none" stroke="#3a2414" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M108 94 q10 -13 20 0" fill="none" stroke="#3a2414" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M86 132 q14 18 28 0 z" fill="#7a2a1a" stroke="#5a3a22" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M93 139 q7 6 14 0 q-7 -3 -14 0z" fill="#e8977a"/>
+  </g>
+  <g class="m m-suspicious">
+    <path d="M70 84 q12 2 24 -2" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M106 64 q13 -14 27 -4" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M76 93 h12" stroke="#3a2414" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="118" cy="92" r="9" fill="#fff" stroke="#3a2414" stroke-width="1.5"/><circle cx="114" cy="93" r="5" fill="#3a2414"/>
+    <path d="M90 138 l22 -5" stroke="#5a3a22" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g class="m m-shocked">
+    <path d="M68 66 q13 -10 26 -2" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M106 60 q13 -12 27 -2" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="82" cy="90" r="8" fill="#fff" stroke="#3a2414" stroke-width="2"/><circle cx="82" cy="90" r="2.4" fill="#3a2414"/>
+    <circle cx="118" cy="90" r="12" fill="#fff" stroke="#3a2414" stroke-width="2"/><circle cx="118" cy="90" r="3" fill="#3a2414"/>
+    <ellipse cx="100" cy="140" rx="8" ry="11" fill="#7a2a1a" stroke="#5a3a22" stroke-width="2.5"/>
+  </g>
+  <g class="m m-sad">
+    <path d="M70 80 q12 -2 22 -10" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M108 70 q10 8 24 10" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="82" cy="94" r="4" fill="#3a2414"/><circle cx="118" cy="94" r="6.5" fill="#3a2414"/>
+    <path d="M90 141 q10 -9 20 0" fill="none" stroke="#5a3a22" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g class="m m-crying">
+    <path d="M70 80 q12 -2 22 -10" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M108 70 q10 8 24 10" fill="none" stroke="#f4f1ea" stroke-width="7" stroke-linecap="round"/>
+    <path d="M75 94 q7 6 14 0" fill="none" stroke="#3a2414" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M108 94 q10 8 20 0" fill="none" stroke="#3a2414" stroke-width="4.5" stroke-linecap="round"/>
+    <path class="tear-l" d="M78 98 q-4 16 -2 30 q-6 -14 -4 -30z" fill="#7fc4e8" stroke="#2f6f78" stroke-width="1.5"/>
+    <path class="tear-r" d="M124 98 q6 16 4 30 q6 -14 2 -30z" fill="#7fc4e8" stroke="#2f6f78" stroke-width="1.5"/>
+    <path d="M86 146 q4 -14 14 -12 q10 -2 14 12 q-14 -6 -28 0z" fill="#7a2a1a" stroke="#5a3a22" stroke-width="2.5" stroke-linejoin="round"/>
+  </g>
+
+  <!-- A potato nose and a magnificent handlebar moustache -->
+  <ellipse cx="100" cy="108" rx="12" ry="10" fill="#e8977a" stroke="#5a3a22" stroke-width="2.5"/>
+  <ellipse cx="96" cy="105" rx="3.5" ry="2.2" fill="#fff" opacity=".6"/>
+  <path d="M100 118 C 88 113, 70 113, 61 123 C 55 129, 47 123, 52 113 C 46 130, 64 138, 79 130 C 88 126, 96 126, 100 124 C 104 126, 112 126, 121 130 C 136 138, 154 130, 148 113 C 153 123, 145 129, 139 123 C 130 113, 112 113, 100 118 Z" fill="#f4f1ea" stroke="#5a3a22" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M84 120 q6 2 10 6 M116 120 q-6 2 -10 6" stroke="#d8d2c4" stroke-width="1.5" fill="none"/>
+
+  <!-- The monocle, on a gold chain (it pops off when he's shocked) -->
+  <path d="M134 96 Q154 128 124 152" fill="none" stroke="#c99a2e" stroke-width="2" stroke-dasharray="3 2"/>
+  <g class="monocle">
+    <circle cx="118" cy="92" r="17" fill="rgba(200, 230, 255, .3)" stroke="#c99a2e" stroke-width="4"/>
+    <path d="M108 84 q4 -5 10 -5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+  </g>
+
+  <!-- His trusty magnifying glass, and tweezers with a stamp -->
+  <g transform="rotate(-25 46 168)">
+    <rect x="42" y="168" width="9" height="30" rx="4" fill="#7a4a2a" stroke="#5a3a22" stroke-width="2"/>
+    <circle cx="46" cy="150" r="19" fill="rgba(200, 230, 255, .45)" stroke="#5a3a22" stroke-width="5"/>
+    <path d="M36 142 q5 -7 13 -7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  </g>
+  <circle cx="52" cy="186" r="10" fill="#f1c7a0" stroke="#5a3a22" stroke-width="2.5"/>
+  <path d="M150 190 L166 150 M154 192 L170 152" stroke="#9aa0a6" stroke-width="2.5" stroke-linecap="round"/>
+  <g transform="rotate(10 168 140)">
+    <rect x="158" y="128" width="20" height="24" fill="#f8ecd2" stroke="#5a3a22" stroke-width="1.6" stroke-dasharray="2 1.3"/>
+    <rect x="161" y="131" width="14" height="18" fill="#2f6f78"/>
+    <circle cx="168" cy="140" r="4" fill="#e8a33d"/>
+  </g>
+  <circle cx="150" cy="192" r="10" fill="#f1c7a0" stroke="#5a3a22" stroke-width="2.5"/>
+</svg>

@@ -352,3 +352,34 @@ const GRADE_QUIPS = {
   "WRECK": ["the stamp is in witness protection now", "this is why we can't have nice things", "please hold the stamp gently next time. it has a family."],
   "PHILATELIC CATASTROPHE": ["the album will need therapy", "you owe that stamp an apology", "achievement unlocked: crime", "the stamp went to stamp heaven"],
 };
+
+// What the stamp yells when things go wrong
+const STAMP_SCREAMS = ["NOT LIKE THIS!", "I have a family!", "ow ow ow ow", "is this how you treat royalty?!", "I was printed in a better century", "call my lawyer!", "mommy?", "I'm just a little guy!", "the glue was my friend!", "tell my perforations I loved them"];
+
+// ⏳ When a forgery fails, the seal ends up older than the stamp itself
+const PARADOX_JOKES = [
+  "this stamp was cancelled before it existed",
+  "the postman delivered it with a time machine",
+  "historians are furious. physicists are thrilled.",
+  "the seal is older than the stamp. the stamp is older than the seal. nobody knows anymore.",
+  "somewhere a grandfather paradox just got sealed",
+  "the Universal Postal Union has opened a wormhole investigation",
+  "you didn't forge a seal, you forged a timeline",
+];
+
+// Mr. Hinge, the philatelist who runs the stamp shop by the beach
+const HINGE_HELLO = ["Ah, a fellow collector! Mind the perforations.", "Welcome, welcome! Do wipe the sand off your stamps.", "Hello! I smell glue. Wonderful.", "Come in, come in! Only honest stamps here, I trust?"];
+const HINGE_HAPPY = ["Splendid! Simply splendid.", "Oh, what a beauty. Into the vault it goes!", "A fine specimen. Pleasure doing business!", "My monocle fogged up. That's how good it is."];
+const HINGE_PITY = ["I'll… take it. Out of pity.", "Is it a stamp or a crime scene? Here, one coin.", "I'll use it as a coaster. One coin."];
+const HINGE_FOOLED = ["A home seal, how rare! I'm a lucky man today.", "First day of issue! Marvellous! Nothing suspicious at all.", "What crisp ink! Almost… too crisp. No, no, lovely!"];
+const HINGE_BUSTED = [
+  ["🧐", "Let me just have a closer look with my loupe…"],
+  ["🤨", "Hmm. This ink is still… wet?"],
+  ["😧", "This seal is… FAKE?!"],
+  ["😞", "I trusted you. I trusted the beach."],
+  ["😭", "I need to lie down. The shop is CLOSED for today!"],
+];
+const HINGE_CLOSED = ["Mr. Hinge is lying on the sofa with a cold towel on his forehead.", "A sign on the door says: 'Gone to question everything. Back tomorrow.'", "Through the window you see Mr. Hinge sadly sorting his stamps by trustworthiness."];
+const HINGE_WARY = ["Back again? Let me… polish my loupe first.", "Hello. I'm checking every perforation today.", "Welcome. Please keep your glue where I can see it."];
+const HINGE_NOTICED = ["Hmm. This seal is… creative. I'll buy it for my museum of shame.", "Is this glue still WET? …Fine. Half price.", "A Vatican stamp sealed in the Sahara? I'll take it. Sigh.", "I can see the scissor marks, you know. Here, a few coins."];
+const HINGE_HEARTBROKEN = ["Another one. I'll buy it. I just need a minute.", "My monocle is fogging up, and not in a good way.", "I used to believe in people. And perforations.", "I'm not crying, there's glue in my eye."];

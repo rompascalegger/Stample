@@ -8,8 +8,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' fill='%23fdf6e3' stroke='%239b2335' stroke-dasharray='2 1'/%3E%3Ccircle cx='9' cy='9' r='4' fill='none' stroke='%231d2d6b'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Caveat:wght@500;700&family=Special+Elite&family=Patrick+Hand&family=Indie+Flower&family=Gochi+Hand&family=Kalam&family=Shadows+Into+Light&family=Reenie+Beanie&family=Nanum+Pen+Script&family=Gloria+Hallelujah&family=Covered+By+Your+Grace&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.3.0">
+  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Shrikhand&family=Righteous&family=Caveat:wght@500;700&family=Special+Elite&family=Patrick+Hand&family=Indie+Flower&family=Gochi+Hand&family=Kalam&family=Shadows+Into+Light&family=Reenie+Beanie&family=Nanum+Pen+Script&family=Gloria+Hallelujah&family=Covered+By+Your+Grace&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2.6.0">
 </head>
 <body>
   <div class="beach" aria-hidden="true">
@@ -48,10 +48,13 @@
     <div class="chips">
       <span class="chip" title="Different stamps in your album">📖 <b id="c-album">0</b><small>/<span id="c-catalog">0</span></small></span>
       <span class="chip" title="Stamps peeled in total">✉️ <b id="c-total">0</b></span>
+      <span class="chip" title="Coins from Mr. Hinge's shop">🪙 <b id="coins">0</b></span>
       <span class="chip" title="Countries you have stamps from">🌍 <b id="c-countries">0</b><small>/<span id="c-world">0</span></small></span>
     </div>
     <div class="top-btns">
       <button id="album-btn" class="btn" type="button">📖 Album</button>
+      <button id="shop-btn" class="btn" type="button">🏪 Shop</button>
+      <button id="workshop-btn" class="btn" type="button">🖋️ Forge</button>
       <button id="help-btn" class="btn icon" type="button" aria-label="How to play">?</button>
       <button id="mute" class="btn icon" type="button" aria-label="Toggle sound">♪</button>
     </div>
@@ -93,6 +96,7 @@
       <div class="meter"><span id="m-peel-label" class="m-label">CUT</span><div class="m-bar"><div id="peel-fill" class="m-fill peel"></div></div><span id="peel-pct" class="m-val">0%</span></div>
       <div class="meter"><span class="m-label">STRAIN</span><div class="m-bar"><div id="strain-fill" class="m-fill strain"></div></div><span id="tears" class="m-val" title="Tears in this stamp">♡</span></div>
     </div>
+    <div id="powers" class="powers" aria-label="Power-ups"></div>
     <p id="hint" class="hint"></p>
 
     <div class="btn-row">
@@ -119,6 +123,10 @@
       <p id="r-id" class="r-id"></p>
       <div id="r-grade" class="r-grade"></div>
       <table class="r-table"><tbody id="r-rows"></tbody></table>
+      <div class="fake-row">
+        <button id="r-fake-seal" class="btn fake" type="button" hidden>🖋️ Fake the seal</button>
+        <button id="r-fake-year" class="btn fake" type="button" hidden>🖋️ Fake the year</button>
+      </div>
       <button id="r-next" class="btn primary" type="button">Next postcard ▸</button>
       <button id="r-album" class="btn" type="button">📖 Open album</button>
     </div>
@@ -147,6 +155,59 @@
     </div>
   </div>
 
+  <div id="forge" class="modal" hidden role="dialog" aria-label="Forgery">
+    <div class="modal-box forge-box">
+      <h2 id="forge-title">🖋️ Forgery</h2>
+      <div id="forge-art" class="forge-art"></div>
+      <p id="forge-msg" class="forge-msg"></p>
+      <p class="modal-sub">Get it right and it becomes a special. Get it wrong and… well. Time is fragile.</p>
+    </div>
+  </div>
+
+  <div id="workshop" class="modal" hidden role="dialog" aria-label="Forgery workshop">
+    <div class="modal-box workshop-box">
+      <button class="modal-close" type="button" aria-label="Close">✕</button>
+      <h2>🖋️ Forgery Workshop</h2>
+      <p class="modal-sub">Cut and glue your own "rare" stamp. It only costs the stamps you cut up (spares first). Sloppy work shows.</p>
+      <div class="ws-grid">
+        <div class="ws-left">
+          <div id="ws-preview" class="ws-preview"></div>
+          <p id="ws-msg" class="forge-msg"></p>
+        </div>
+        <div class="ws-steps">
+          <label class="ws-step"><b>1 · 🖼️ Picture</b><select id="ws-base"></select></label>
+          <div class="ws-step"><b>2 · ✂️ Country label</b><select id="ws-label-donor"></select><button id="ws-cut-label" class="btn ws-do" type="button">✂️ Cut &amp; glue</button></div>
+          <div class="ws-step"><b>3 · 🔏 Seal</b>
+            <select id="ws-seal-donor"></select><button id="ws-cut-seal" class="btn ws-do" type="button">✂️ Cut seal</button>
+            <span class="ws-or">or carve a new one:</span>
+            <span class="ws-row"><select id="ws-seal-country"></select><input id="ws-seal-year" type="number" inputmode="numeric" aria-label="Seal year"></span>
+            <button id="ws-carve-seal" class="btn ws-do" type="button">🔏 Stamp it</button>
+          </div>
+          <div class="ws-step"><b>4 · 🔢 Year on the stamp</b><span class="ws-row"><input id="ws-year" type="number" inputmode="numeric" aria-label="Year on the stamp"><button id="ws-paint-year" class="btn ws-do" type="button">🖌️ Paint</button></span></div>
+        </div>
+      </div>
+      <p id="ws-claim" class="ws-claim"></p>
+      <button id="ws-finish" class="btn primary" type="button" disabled>🧪 Glue it together</button>
+      <h3 class="ws-h">Your fakes</h3>
+      <div id="ws-fakes" class="ws-fakes"></div>
+    </div>
+  </div>
+
+  <div id="shop" class="modal" hidden role="dialog" aria-label="Stamp shop">
+    <div class="modal-box shop-box">
+      <button class="modal-close" type="button" aria-label="Close">✕</button>
+      <h2>🏪 Mr. Hinge's Stamp Shop</h2>
+      <div class="hinge"><div id="hinge-face" class="hinge-face" aria-label="Mr. Hinge"></div><p id="hinge-say" class="hinge-say"></p></div>
+      <p class="modal-sub">You have 🪙 <b id="shop-coins">0</b> · he pays better for old, rare and beautiful stamps. He buys fakes too, but every one he spots breaks his heart a little.</p>
+      <p class="hinge-heart">Mr. Hinge's heart: <span id="hinge-heart"></span></p>
+      <div class="tabs" role="tablist">
+        <button class="tab" data-shop="sell" type="button">💰 Sell stamps</button>
+        <button class="tab" data-shop="buy" type="button">🎁 Buy power-ups</button>
+      </div>
+      <div id="shop-list" class="shop-list"></div>
+    </div>
+  </div>
+
   <div id="help" class="modal" hidden role="dialog" aria-label="How to play">
     <div class="modal-box help-box">
       <button class="modal-close" type="button" aria-label="Close">✕</button>
@@ -156,6 +217,11 @@
         <li><b>① Tear it out.</b> Trace the dotted line around the stamp, slowly. Rushing builds up <b>strain</b> and at full strain the stamp tears; drawing across the stamp cuts into it. The closer you stay to the line, the cleaner the cut.</li>
         <li><b>② Peel it.</b> Drag from the glowing corner toward the middle, a short gentle stroke at a time, then the next corner. Pulling the wrong way strains it too. Old stamps are more fragile.</li>
         <li><b>Every card picks a minigame</b> for step ②: 🤏 peel the corners, ♨️ steam it (hold to heat, stay in the green zone), 🎯 wiggle it loose (tap in the zone, it speeds up) or 🪶 tickle it off (rub back and forth fast).</li>
+        <li><b>Ten minigames:</b> also 🌬️ blow it off, 💨 hair dryer circles, 🥢 toothpick pokes, 🧽 sponge scrub, 🧠 stamp says and 🗿 staring contest. Fail and funny things happen.</li>
+        <li><b>Power-ups</b> (under the meters): 💧 water down, 🧊 ice cube, 🩹 tape, 🫖 calm tea, 🍀 lucky clover, ✂️ golden scissors. Find them under stamps and in bottles, or buy them in the shop.</li>
+        <li><b>🖋️ Forgery:</b> after peeling you can fake the seal or the year. Three steady taps make it a special. Fail and the seal ends up older than the stamp: a time paradox.</li>
+        <li><b>🖋️ Forge workshop:</b> cut the country label off one stamp, cut a seal off another or carve a brand-new one (any country, any year), paint any year on it and glue it all together.</li>
+        <li><b>🏪 Mr. Hinge</b> buys your stamps for coins, fakes included. Every fake he spots breaks his heart a little (he still buys it, cheaper), and the sadder he gets, the likelier he closes the shop for the day. A night's sleep mends some of it.</li>
         <li><b>Too many tears</b> and quality goes below zero. At 8 tears the stamp falls apart completely: a philatelic catastrophe, filed in your album forever.</li>
         <li><b>⚡ Quick rip</b> skips all that: one yank with the success chance shown on the button. Old, rare, glued-hard or already torn stamps have worse odds. Success gives a rushed but whole stamp; failure tears it.</li>
         <li><b>Cards can come with gimmicks:</b> 🍯 extra sticky, 💧 wet (peels easily), 💨 windy (gusts tug at it), 🏖️ sandy (scratchy), 🌟 shiny (a special!). And sometimes something lives under the stamp.</li>
@@ -179,7 +245,7 @@
   <div id="alert" class="alert" hidden role="alert"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script src="data.js?v=2.3.0"></script>
-  <script src="script.js?v=2.3.0"></script>
+  <script src="data.js?v=2.6.0"></script>
+  <script src="script.js?v=2.6.0"></script>
 </body>
 </html>
