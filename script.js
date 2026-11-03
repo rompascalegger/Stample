@@ -370,15 +370,24 @@ function pickStamp(c) {
 }
 
 function writeText(f, t, p) {
+  // Some other pen pal to gossip about: never the sender, the recipient or the last writer
+  let o;
+  do { o = pick(COUNTRIES); } while (o === f || o === t || o === p);
+  // One random word per placeholder per card, so a {food} mentioned twice is the same food
+  const words = { food: pick(FOODS), animal: pick(ANIMALS), thing: pick(THINGS) };
   const fill = (s) => s
-    .replace(/\{to\}/g, callName(t)).replace(/\{from\}/g, callName(f))
+    .replace(/\{to\}/g, callName(t)).replace(/\{from\}/g, callName(f)).replace(/\{hello\}/g, f.hello)
     .replace(/\{city\}/g, f.city).replace(/\{country\}/g, f.name).replace(/\{dest\}/g, t.name)
     .replace(/\{prev\}/g, p ? p.name : "abroad").replace(/\{prevName\}/g, p ? callName(p) : "a friend")
+    .replace(/\{otherName\}/g, callName(o)).replace(/\{otherCity\}/g, o.city).replace(/\{other\}/g, o.name)
+    .replace(/\{food\}/g, words.food).replace(/\{animal\}/g, words.animal).replace(/\{thing\}/g, words.thing)
     .replace(/\{smell\}/g, pick(SMELLS)).replace(/\{smell2\}/g, pick(SMELLS));
-  const lines = [`${f.hello}, ${callName(t)}!`];
-  if (p && rand() < 0.75) lines.push(fill(pick(TEXT_PREV)));
+  const lines = [fill(rand() < 0.5 ? TEXT_OPENERS[0] : pick(TEXT_OPENERS))];
+  if (p && rand() < 0.65) lines.push(fill(pick(TEXT_PREV)));
   lines.push(fill(pick(TEXT_PLACE)));
-  lines.push(fill(pick(rand() < 0.5 ? TEXT_DEST : TEXT_FUNNY)));
+  if (rand() < 0.3) lines.push(fill(pick(TEXT_PLACE.filter((l) => !lines.includes(fill(l))))));
+  const r = rand();
+  lines.push(fill(pick(r < 0.4 ? TEXT_DEST : r < 0.75 ? TEXT_FUNNY : TEXT_GOSSIP)));
   return { lines, ps: rand() < 0.45 ? fill(pick(TEXT_PS)) : "", sign: `${f.bye},\n${callName(f)}` };
 }
 
@@ -911,7 +920,7 @@ function tear(msg) {
   peel.strain = 35;
   const n = card.tears.length;
   sfx.tear(n);
-  toast(msg ? msg : n <= TEAR_JOKES.length ? TEAR_JOKES[n - 1] : pick(TEAR_QUIPS), "bad");
+  toast(msg ? msg : n <= TEAR_JOKES.length ? pick(TEAR_JOKES[n - 1]) : pick(TEAR_QUIPS), "bad");
   const st = STAMPS[card.stampId];
   stampEl.innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
   // Shreds of the stamp itself fly off where it tore
@@ -1065,6 +1074,10 @@ function showResult(st, sc, status, old) {
   openModal("result");
   if (gstars < 0) sfx.sadTrombone(); else sfx.chime(gstars);
   if (sc.q < 0) egg("catastrophe", "Philatelic catastrophe: quality below zero");
+  if (sc.sp.includes("paradox")) setTimeout(() => hingeCameo("paradox"), 600);
+  else if (sc.q < 0) setTimeout(() => hingeCameo("catastrophe"), 600);
+  else if (sc.q >= 90) setTimeout(() => hingeCameo("gem"), 600);
+  else if (sc.combo) setTimeout(() => hingeCameo("combo"), 600);
   if (gstars >= 4) { toast(gname + "!", "good"); confetti(gstars * 12); }
   if (sc.q >= 90) egg("gem", "Gem hunter: a GEM MINT stamp");
   if (sc.sp.includes("home") && sc.sp.includes("firstday")) egg("dream", "Philatelist's dream: home seal on the first day");
@@ -1178,6 +1191,10 @@ function nextCard() {
     postcard.classList.add("arrive");
     setTimeout(() => postcard.classList.remove("arrive"), 600);
     if (S.card.no === 42) egg("answer", "Postcard #42: the answer to everything is stamps");
+    const nst = STAMPS[S.card.stampId];
+    if (nst.rarity === "legendary") setTimeout(() => hingeCameo("legendary"), 900);
+    else if (S.card.shiny) setTimeout(() => hingeCameo("shiny"), 900);
+    else if (nst.rarity === "rare" && rand() < 0.5) setTimeout(() => hingeCameo("rare"), 900);
     if (S.card.no % 7 === 0 || rand() < 0.08) washBottle();
   }, 380);
 }
@@ -2068,6 +2085,30 @@ function showDetail(id) {
   openModal("detail");
 }
 
+// ---------- Mr. Hinge's cameos ----------
+
+// When something rare turns up, Mr. Hinge pops in from the side of the beach to have a look
+let lastCameo = 0, cameoTimer = 0;
+function hingeCameo(kind) {
+  const now = performance.now();
+  if (!HINGE_CAMEO[kind] || now - lastCameo < 6000 || !$("shop").hidden || !$("splash").classList.contains("gone")) return;
+  lastCameo = now;
+  const [face, line] = pick(HINGE_CAMEO[kind]);
+  const el = $("cameo");
+  const show = (art) => {
+    el.querySelector(".cameo-art").innerHTML = art || face;
+    const svg = el.querySelector("svg");
+    if (svg) svg.dataset.mood = HINGE_MOODS[face] || "neutral";
+    el.querySelector(".cameo-say").textContent = line;
+    el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
+    tone(660, 0.12, { type: "triangle", vol: 0.08 }); tone(990, 0.18, { type: "triangle", vol: 0.08, delay: 0.1 });
+    clearTimeout(cameoTimer);
+    cameoTimer = setTimeout(() => el.classList.remove("in"), 4200);
+  };
+  if (!hingeArt) hingeArt = fetch("hinge.svg").then((r) => r.text()).catch(() => "");
+  hingeArt.then((t) => show(typeof t === "string" ? t : $("hinge-face").innerHTML));
+}
+
 // ---------- Mr. Hinge's stamp shop ----------
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -2086,11 +2127,9 @@ function hingeSay(face, text) {
   const box = $("hinge-face");
   const mood = HINGE_MOODS[face] || "neutral";
   const setMood = () => { const svg = box.querySelector("svg"); if (svg) svg.dataset.mood = mood; };
-  if (!hingeArt) {
-    box.textContent = face;
-    hingeArt = fetch("hinge.svg").then((r) => r.text()).then((t) => { box.innerHTML = t; }).catch(() => {});
-  }
-  hingeArt.then(setMood);
+  if (!hingeArt) hingeArt = fetch("hinge.svg").then((r) => r.text()).catch(() => "");
+  if (!box.querySelector("svg")) box.textContent = face;
+  hingeArt.then((t) => { if (t && !box.querySelector("svg")) box.innerHTML = t; setMood(); });
   setMood();
   box.classList.remove("talk"); void box.offsetWidth; box.classList.add("talk");
   $("hinge-say").textContent = text;
@@ -2196,8 +2235,8 @@ function busted() {
   hingeClosing = true;
   const btns = document.querySelectorAll("#shop-list button");
   btns.forEach((b) => (b.disabled = true));
-  HINGE_BUSTED.forEach(([face, line], i) => setTimeout(() => {
-    hingeSay(face, line);
+  HINGE_BUSTED.forEach(([face, lines], i) => setTimeout(() => {
+    hingeSay(face, pick(lines));
     if (i === 2) { tone(180, 0.6, { to: 90, vol: 0.12, wobble: 10 }); document.body.classList.add("ouch"); setTimeout(() => document.body.classList.remove("ouch"), 500); }
     if (i === HINGE_BUSTED.length - 1) {
       sfx.sadTrombone();
@@ -2500,6 +2539,15 @@ $("help-grades").innerHTML = GRADES.map(([min, name, gs]) => `<span><span class=
 const EGGS = ["sun", "shades", "volley10", "volley25", "crab", "gull", "bottle", "shells", "castle", "logo", "aloha", "pennytyped",
   "gem", "dream", "zen", "penny", "answer", "nightowl", "umbrella", "confetti", "sos", "icecream", "flipflop", "palm", "butter", "stowaway", "lucky", "destroyer", "catastrophe", "paradox", "busted", "closed", "forger"];
 const BOTTLE_NOTES = [
+  "Mr. Hinge cries at forgeries. He also cries at sunsets. He's a crier.",
+  "If a stamp is shiny, Mr. Hinge will come running.",
+  "Water down the glue, then peel. Ancient beach wisdom.",
+  "The seagull is not your friend. The seagull is nobody's friend.",
+  "Cut along the dotted line. It's dotted for a reason.",
+  "Some seals are older than their stamps. Those are lies.",
+  "Help, I'm trapped in a bottle factory. Just kidding. Or am I.",
+  "Whoever finds this: I owe you a sandwich.",
+  "Message from the year 2026: still peeling.",
   "The sun has a secret. Click it. A lot.",
   "There are five shells hidden on this beach.",
   "Old gamers know a code. Up, up…",

@@ -248,7 +248,20 @@ const INKS = ["#9b2335", "#1f4e8c", "#3d6b35", "#6b3d7a", "#b5651d", "#1d6b6b", 
 const MARK_INKS = ["#1b1b1f", "#1d2d6b", "#a3202b", "#4b2a6b", "#1f4d33"];
 
 // Postcard texts. {to} recipient's first name, {from} sender's first name, {city} {country} where it was sent,
-// {dest} where it goes, {prev} {prevName} who wrote to the sender before.
+// {dest} where it goes, {prev} {prevName} who wrote to the sender before, {hello} the sender's greeting,
+// {other} {otherName} {otherCity} a random pen pal somewhere else, {smell} {smell2} {food} {animal} {thing} random words.
+const TEXT_OPENERS = [
+  "{hello}, {to}!",
+  "{hello} {hello}, {to}!!",
+  "Dearest {to},",
+  "{to}! {hello}!",
+  "{hello} from {city}, {to}!",
+  "Oi {to}! I mean… {hello}!",
+  "To the one and only {to}:",
+  "{hello}, {to}, my favourite stranger!",
+  "{to}, it's me again. {hello}!",
+  "Breaking news, {to}:",
+];
 const TEXT_PREV = [
   "{prevName} just sent me a card from {prev}, so now it's my turn to pass it on.",
   "Got a lovely card from {prevName} in {prev}! Someone had already peeled the stamp off. Who DOES that?!",
@@ -257,6 +270,11 @@ const TEXT_PREV = [
   "My card from {prev} smelled faintly of {smell}. I hope this one smells of {smell2}.",
   "{prevName} in {prev} says hi. Well, {prevName} said hi to me, but I'm forwarding it.",
   "The postman brought a card from {prev} and looked very proud of it.",
+  "{prevName}'s card from {prev} had a doodle of a {animal} on it. I've framed it.",
+  "The card from {prev} took three weeks. I think it went on holiday first.",
+  "{prevName} wrote 'greetings from {prev}' in such big letters there was no room for anything else. Iconic.",
+  "I read {prevName}'s card from {prev} out loud to my plants. They grew a little.",
+  "Someone in {prev} mailed me a postcard with a stamp that was half missing. Sound familiar?",
 ];
 const TEXT_PLACE = [
   "Greetings from {city}! The weather is doing that thing again.",
@@ -281,6 +299,29 @@ const TEXT_PLACE = [
   "I joined a choir. They asked me to sing quieter. I'm the loudest in {country} now.",
   "The goats on the hill have started a band. Mostly percussion.",
   "Someone in {city} sells umbrellas AND sunglasses from one cart. A genius. A visionary.",
+  "I tried {food} for the first time. My life is now divided into before and after.",
+  "There's a {animal} outside my window that sings every morning at 5. I hate it. I love it. I hate it.",
+  "I got lost in {city} and asked for directions. Three people gave me three different answers and a {food}.",
+  "Our town festival had a {thing} contest. I came second. There were two people.",
+  "I started jogging. Well, I bought the shoes. That's the first step, right?",
+  "The bus was so late today that it arrived early for tomorrow.",
+  "Grandma taught me to cook {food}. She says I'm 'getting there'. She said that in 1998 too.",
+  "The wind here blew my hat into {country}'s neighbouring country. Probably.",
+  "I found a {thing} on the beach. I've named it Kevin. Kevin lives on my shelf now.",
+  "I'm learning to knit. So far I have made one very long, very confused scarf.",
+  "A street musician in {city} played my favourite song. I tipped them in {food}. Long story.",
+  "The power went out yesterday, so I wrote this postcard by candlelight. Very romantic. Very dark.",
+  "There's a new café in {city} that only serves cereal. I've been there four times. Today.",
+  "My upstairs neighbour is learning the trumpet. I am learning patience.",
+  "{country} won something today and everyone is honking. I don't know what we won. I'm honking anyway.",
+  "I painted my kitchen yellow. Now it feels like breakfast all day.",
+  "I saw a cloud shaped exactly like a {animal}. Then it became a {thing}. Clouds are wild.",
+  "The fish market in {city} is so loud I could hear it from my bed. Good morning, fish.",
+  "Fun fact about {country}: we have more {animal}s than postboxes. I counted. Twice.",
+  "I tried to take a selfie with a {animal}. The {animal} took a selfie with me.",
+  "Everyone in {city} is obsessed with a TV show I've never seen. I nod a lot.",
+  "My bicycle has a flat tyre, a squeaky bell and a lot of character.",
+  "I went swimming in the sea and a fish looked at me like I owed it money.",
 ];
 const TEXT_DEST = [
   "Is it true that in {dest} you eat dessert first? Asking for me.",
@@ -290,6 +331,23 @@ const TEXT_DEST = [
   "I put a little pin on {dest} on my fridge map. It looks very proud.",
   "{to}, I hope this card finds you well. If it finds you unwell, it brings soup vibes.",
   "Write me about {dest}! Lie a little if it's boring.",
+  "What's the weather like in {dest}? Here it's 'yes'.",
+  "I googled {dest} and now I want to move there. Is there room on your sofa?",
+  "Does {dest} have good {food}? Be honest. This is important.",
+  "My cousin says {dest} is beautiful. My cousin also says {thing}s can talk, so I need a second opinion.",
+  "Send me a photo of a {animal} from {dest}. Any {animal}. I'm not picky.",
+  "If you see the postman in {dest}, thank them for me. They're doing great.",
+  "I've heard {dest} has the best sunsets. Prove it.",
+];
+const TEXT_GOSSIP = [
+  "Did you know {otherName} in {otherCity} collects spoons? Absolute legend.",
+  "{otherName} from {other} sent me a card once with just a drawing of a {animal}. Still thinking about it.",
+  "Rumour has it {otherName} in {other} has a stamp from 1840. Rumour also has it {otherName} sleeps with it under the pillow.",
+  "If you ever get a card from {otherName} in {other}, check for glitter. There's ALWAYS glitter.",
+  "{otherName} from {otherCity} owes me a postcard. Tell everyone.",
+  "I heard {otherName} in {other} peels stamps with their teeth. Barbaric.",
+  "{otherName} from {other} says hello! (I made that up, but they probably would.)",
+  "Apparently {otherName} in {otherCity} once tried to fake a seal. Mr. Hinge still talks about it.",
 ];
 const TEXT_FUNNY = [
   "I licked the stamp. It tasted like history and mild regret.",
@@ -303,6 +361,18 @@ const TEXT_FUNNY = [
   "The postmark machine ate my first card. This is card number two. Be nice to it.",
   "I asked for a stamp with a cat on it. They gave me this. Close enough.",
   "The clerk stamped this so hard the counter shook. Respect.",
+  "I tried to put the stamp on straight. The stamp had other plans.",
+  "This postcard cost more than my lunch. Worth it. Lunch was sad.",
+  "If you read this upside down it's a different message. (It isn't. But you tried, didn't you?)",
+  "I accidentally put two stamps on. Now it's a first-class-first-class card.",
+  "The post office was closed so I gave this to a seagull. If it arrives, that's amazing.",
+  "Warning: this postcard may contain traces of sand.",
+  "I sealed this with a kiss. Then I remembered postcards don't have envelopes. Awkward.",
+  "Do NOT show this stamp to Mr. Hinge. He'll want it. He wants ALL of them.",
+  "I've drawn a tiny map on the back so the postman doesn't get lost. It's mostly arrows.",
+  "Somebody at the post office asked if I wanted 'the ugly stamp or the nice stamp'. Guess which one this is.",
+  "This card is 100% recyclable, 0% boring.",
+  "I wrote this on the bus. Any bumps in the letters are potholes. Blame the city.",
 ];
 const TEXT_PS = [
   "P.S. Write back! Or don't. But do.",
@@ -311,21 +381,32 @@ const TEXT_PS = [
   "P.S. Sorry about the handwriting, the bus was bumpy.",
   "P.S. Did I spell your name right this time?",
   "P.S. Peel slowly. Trust me.",
+  "P.S. The {animal} says hi.",
+  "P.S. If you find sand in this card, it's a free souvenir.",
+  "P.S. I owe you {food}. Don't let me forget.",
+  "P.S. This is the third P.S. I've written. The other two were worse.",
+  "P.S. Tell nobody about the {thing}.",
+  "P.S. Don't tell the postman I drew a moustache on the stamp.",
+  "P.P.S. I mean it about the {food}.",
+  "P.S. The seagull is watching. Act natural.",
 ];
-const SMELLS = ["cinnamon", "the sea", "old books", "rain", "fresh bread", "a slightly damp dog", "oranges", "pine trees", "adventure"];
+const SMELLS = ["cinnamon", "the sea", "old books", "rain", "fresh bread", "a slightly damp dog", "oranges", "pine trees", "adventure", "sunscreen", "grandma's kitchen", "fresh paint", "a bonfire", "mystery cheese", "popcorn", "wet sand"];
+const FOODS = ["dumplings", "pancakes", "pickled herring", "mango", "spicy soup", "fried plantain", "a giant pretzel", "sticky rice", "cheese on toast", "falafel", "ice cream", "flatbread", "fish tacos", "chocolate cake", "noodles", "a suspicious jelly"];
+const ANIMALS = ["goat", "pelican", "llama", "hedgehog", "parrot", "crab", "donkey", "flamingo", "capybara", "seal", "duck", "camel", "turtle", "squirrel", "moose", "hamster"];
+const THINGS = ["rubber duck", "lighthouse", "sock", "garden gnome", "shell", "umbrella", "accordion", "teapot", "kite", "sandcastle", "trombone", "lamp", "potato", "boot", "hat"];
 
-// Funny lines when you tear a stamp, one per tear, getting more desperate (the stamp falls apart at the 8th)
+// Funny lines when you tear a stamp, a few for each tear, getting more desperate (the stamp falls apart at the 8th)
 const TEAR_JOKES = [
-  "oops. tiny rip.",
-  "that's… fine. totally fine.",
-  "the stamp would like to speak to your manager",
-  "quality just went negative. impressive!",
-  "somewhere, a philatelist faints 😵",
-  "the Universal Postal Union has been notified",
-  "this is technically confetti now",
-  "💥 KAPUTT",
+  ["oops. tiny rip.", "a little nick. nobody saw.", "rip. just a small one.", "that's… a feature."],
+  ["that's… fine. totally fine.", "two tears. still a stamp. probably.", "the stamp is breathing heavily", "this is fine 🔥"],
+  ["the stamp would like to speak to your manager", "the stamp is filing a complaint", "three tears! it's not a contest!", "the perforations are unionising"],
+  ["quality just went negative. impressive!", "you are now in minus territory", "the stamp has entered the danger zone", "four tears. the stamp is writing its will."],
+  ["somewhere, a philatelist faints 😵", "Mr. Hinge felt that from across the beach", "the stamp is mostly vibes now", "five tears. this is art now."],
+  ["the Universal Postal Union has been notified", "a stamp lawyer is on the way", "six tears. even the glue is giving up.", "the stamp is seeing its whole life flash by. it was short."],
+  ["this is technically confetti now", "seven tears. the stamp has made peace with it.", "one more and it's a jigsaw puzzle", "the stamp just whispered 'tell my mother'"],
+  ["💥 KAPUTT", "💥 the stamp has left the building", "💥 it is no more. it has ceased to stamp.", "💥 congratulations, you made confetti"],
 ];
-const TEAR_QUIPS = ["RRRIP!", "the perforation wins", "slower, slower…", "it felt that", "a moment of silence, please"];
+const TEAR_QUIPS = ["RRRIP!", "the perforation wins", "slower, slower…", "it felt that", "a moment of silence, please", "ouch!", "the stamp screams in Latin", "that's going in the diary"];
 
 // The big ☠️ PHILATELIC CATASTROPHE alert, when quality drops below zero
 const DOOM_JOKES = [
@@ -339,22 +420,33 @@ const DOOM_JOKES = [
   "insurance does not cover 'enthusiasm'",
   "this will be studied in philately school. as a warning.",
   "the stamp's last words were 'please, slower'",
+  "a tiny funeral is being held in the sorting office",
+  "the stamp's ghost will haunt your album forever",
+  "somewhere, a museum curator just woke up screaming",
+  "you didn't peel it, you defeated it",
+  "the stamp is now legally a crumb",
+  "the stamp's family has asked for privacy at this difficult time",
 ];
 
 // One of these turns up under the grade on every result
 const GRADE_QUIPS = {
-  "GEM MINT": ["museums will fight over this", "you have the hands of a surgeon", "the stamp is crying tears of joy"],
-  "SUPERB": ["the album sparkles a little brighter", "a collector just nodded at you approvingly", "chef's kiss"],
-  "VERY FINE": ["very fine indeed, darling", "your grandma would frame this", "solid work, keep peeling"],
-  "FINE": ["it's fine. it's FINE.", "respectable. like a beige cardigan.", "nothing a little love can't fix"],
-  "FAIR": ["it's seen things", "has character, as they say", "well, it's a stamp. mostly."],
-  "POOR": ["the stamp needs a hug", "it survived, technically", "we don't talk about this one"],
-  "WRECK": ["the stamp is in witness protection now", "this is why we can't have nice things", "please hold the stamp gently next time. it has a family."],
-  "PHILATELIC CATASTROPHE": ["the album will need therapy", "you owe that stamp an apology", "achievement unlocked: crime", "the stamp went to stamp heaven"],
+  "GEM MINT": ["museums will fight over this", "you have the hands of a surgeon", "the stamp is crying tears of joy", "Mr. Hinge just fainted with happiness", "frame it. no, frame the frame.", "perfection has a new address"],
+  "SUPERB": ["the album sparkles a little brighter", "a collector just nodded at you approvingly", "chef's kiss", "the stamp is doing a little dance", "smooth as a seal on a slide"],
+  "VERY FINE": ["very fine indeed, darling", "your grandma would frame this", "solid work, keep peeling", "a respectable little rectangle", "the stamp approves. mostly."],
+  "FINE": ["it's fine. it's FINE.", "respectable. like a beige cardigan.", "nothing a little love can't fix", "it has lived a full life", "medium rare, as they say"],
+  "FAIR": ["it's seen things", "has character, as they say", "well, it's a stamp. mostly.", "the stamp equivalent of bed hair", "loved, just a bit too much"],
+  "POOR": ["the stamp needs a hug", "it survived, technically", "we don't talk about this one", "it's not ugly, it's vintage", "the stamp has asked to be left alone"],
+  "WRECK": ["the stamp is in witness protection now", "this is why we can't have nice things", "please hold the stamp gently next time. it has a family.", "the stamp has filed for emotional damages", "it looks like it lost a fight with a goat"],
+  "PHILATELIC CATASTROPHE": ["the album will need therapy", "you owe that stamp an apology", "achievement unlocked: crime", "the stamp went to stamp heaven", "the stamp is now a cautionary tale", "historians will call this 'the incident'"],
 };
 
 // What the stamp yells when things go wrong
-const STAMP_SCREAMS = ["NOT LIKE THIS!", "I have a family!", "ow ow ow ow", "is this how you treat royalty?!", "I was printed in a better century", "call my lawyer!", "mommy?", "I'm just a little guy!", "the glue was my friend!", "tell my perforations I loved them"];
+const STAMP_SCREAMS = [
+  "NOT LIKE THIS!", "I have a family!", "ow ow ow ow", "is this how you treat royalty?!", "I was printed in a better century",
+  "call my lawyer!", "mommy?", "I'm just a little guy!", "the glue was my friend!", "tell my perforations I loved them",
+  "I'm worth MONEY!", "put me down, peasant!", "I bite!", "this is a hostage situation", "I'm too young to be peeled!",
+  "can we talk about this?", "my perforations! my beautiful perforations!", "I'm calling the post office!",
+];
 
 // ⏳ When a forgery fails, the seal ends up older than the stamp itself
 const PARADOX_JOKES = [
@@ -365,21 +457,61 @@ const PARADOX_JOKES = [
   "somewhere a grandfather paradox just got sealed",
   "the Universal Postal Union has opened a wormhole investigation",
   "you didn't forge a seal, you forged a timeline",
+  "the stamp has jet lag. from the future.",
+  "according to this seal, the letter arrived before anyone wrote it",
+  "a confused dinosaur just received this postcard",
+  "the space-time continuum would like a word",
+  "this seal has a better time machine than you do",
 ];
 
 // Mr. Hinge, the philatelist who runs the stamp shop by the beach
-const HINGE_HELLO = ["Ah, a fellow collector! Mind the perforations.", "Welcome, welcome! Do wipe the sand off your stamps.", "Hello! I smell glue. Wonderful.", "Come in, come in! Only honest stamps here, I trust?"];
-const HINGE_HAPPY = ["Splendid! Simply splendid.", "Oh, what a beauty. Into the vault it goes!", "A fine specimen. Pleasure doing business!", "My monocle fogged up. That's how good it is."];
-const HINGE_PITY = ["I'll… take it. Out of pity.", "Is it a stamp or a crime scene? Here, one coin.", "I'll use it as a coaster. One coin."];
-const HINGE_FOOLED = ["A home seal, how rare! I'm a lucky man today.", "First day of issue! Marvellous! Nothing suspicious at all.", "What crisp ink! Almost… too crisp. No, no, lovely!"];
-const HINGE_BUSTED = [
-  ["🧐", "Let me just have a closer look with my loupe…"],
-  ["🤨", "Hmm. This ink is still… wet?"],
-  ["😧", "This seal is… FAKE?!"],
-  ["😞", "I trusted you. I trusted the beach."],
-  ["😭", "I need to lie down. The shop is CLOSED for today!"],
+const HINGE_HELLO = [
+  "Ah, a fellow collector! Mind the perforations.", "Welcome, welcome! Do wipe the sand off your stamps.", "Hello! I smell glue. Wonderful.",
+  "Come in, come in! Only honest stamps here, I trust?", "Good day! Have you seen my other monocle?", "Welcome! Tea? Biscuit? Magnifying glass?",
+  "Ah, there you are. The vault has been lonely.", "Hello hello! I dreamt about watermarks last night. Again.",
+  "Step inside! Don't touch the 1840s, they bruise easily.",
 ];
-const HINGE_CLOSED = ["Mr. Hinge is lying on the sofa with a cold towel on his forehead.", "A sign on the door says: 'Gone to question everything. Back tomorrow.'", "Through the window you see Mr. Hinge sadly sorting his stamps by trustworthiness."];
-const HINGE_WARY = ["Back again? Let me… polish my loupe first.", "Hello. I'm checking every perforation today.", "Welcome. Please keep your glue where I can see it."];
-const HINGE_NOTICED = ["Hmm. This seal is… creative. I'll buy it for my museum of shame.", "Is this glue still WET? …Fine. Half price.", "A Vatican stamp sealed in the Sahara? I'll take it. Sigh.", "I can see the scissor marks, you know. Here, a few coins."];
-const HINGE_HEARTBROKEN = ["Another one. I'll buy it. I just need a minute.", "My monocle is fogging up, and not in a good way.", "I used to believe in people. And perforations.", "I'm not crying, there's glue in my eye."];
+const HINGE_HAPPY = [
+  "Splendid! Simply splendid.", "Oh, what a beauty. Into the vault it goes!", "A fine specimen. Pleasure doing business!",
+  "My monocle fogged up. That's how good it is.", "I shall name it Gerald.", "Ooh, I'm going to show this one to my cat.",
+  "Perforations like a dream. Lovely!", "This one's going straight above the fireplace.", "*happy philatelist noises*",
+];
+const HINGE_PITY = ["I'll… take it. Out of pity.", "Is it a stamp or a crime scene? Here, one coin.", "I'll use it as a coaster. One coin.", "I'll put it in the 'please don't look' drawer.", "One coin. And a hug. Mostly for the stamp."];
+const HINGE_FOOLED = [
+  "A home seal, how rare! I'm a lucky man today.", "First day of issue! Marvellous! Nothing suspicious at all.", "What crisp ink! Almost… too crisp. No, no, lovely!",
+  "Such a rare stamp! I didn't even know they made these.", "Remarkable! Utterly unique! Like nothing I've ever seen. Ever.",
+  "Ooh, the glue is still warm! Fresh from… history!",
+];
+// The heartbreak, step by step: [face, possible lines]
+const HINGE_BUSTED = [
+  ["🧐", ["Let me just have a closer look with my loupe…", "Hmm, let me hold this up to the light…", "One moment, I need my second monocle…"]],
+  ["🤨", ["Hmm. This ink is still… wet?", "Why does this seal smell of felt-tip pen?", "Since when does this country use glitter glue?"]],
+  ["😧", ["This seal is… FAKE?!", "THIS IS A FORGERY!", "My loupe… it's seen things it can never unsee!"]],
+  ["😞", ["I trusted you. I trusted the beach.", "And I gave you biscuits.", "I thought we had something. A philatelic bond."]],
+  ["😭", ["I need to lie down. The shop is CLOSED for today!", "That's it! Shop's closed! I'm going to cry into my stamp albums!", "CLOSED! I need a cup of tea and a long, sad nap!"]],
+];
+const HINGE_CLOSED = [
+  "Mr. Hinge is lying on the sofa with a cold towel on his forehead.", "A sign on the door says: 'Gone to question everything. Back tomorrow.'",
+  "Through the window you see Mr. Hinge sadly sorting his stamps by trustworthiness.", "Mr. Hinge is playing sad songs on a tiny accordion.",
+  "A note on the door: 'Closed for emotional maintenance.'", "Mr. Hinge is writing a strongly worded letter to himself.",
+];
+const HINGE_WARY = ["Back again? Let me… polish my loupe first.", "Hello. I'm checking every perforation today.", "Welcome. Please keep your glue where I can see it.", "Oh. It's you. Empty your pockets of scissors, please.", "I've bought a bigger magnifying glass. Just so you know."];
+const HINGE_NOTICED = [
+  "Hmm. This seal is… creative. I'll buy it for my museum of shame.", "Is this glue still WET? …Fine. Half price.",
+  "A Vatican stamp sealed in the Sahara? I'll take it. Sigh.", "I can see the scissor marks, you know. Here, a few coins.",
+  "The country is spelled wrong. Bravely wrong. I'll buy it anyway.", "This stamp has two different years on it. Like a stamp with a midlife crisis.",
+];
+const HINGE_HEARTBROKEN = [
+  "Another one. I'll buy it. I just need a minute.", "My monocle is fogging up, and not in a good way.", "I used to believe in people. And perforations.",
+  "I'm not crying, there's glue in my eye.", "I'm going to start collecting seashells instead. Seashells don't lie.", "Please. Just one honest stamp. For my heart.",
+];
+// When something rare turns up, Mr. Hinge pops in to have a look: [face, line]
+const HINGE_CAMEO = {
+  legendary: [["🤩", "IS THAT…?! Don't move. Don't breathe. Peel it VERY slowly!"], ["🤩", "A legend! I came running the second I smelled it!"], ["😧", "My word… I've only seen that one in books!"]],
+  rare: [["🧐", "Ooh, an old one! Careful with those perforations, they're older than me."], ["😊", "Psst! That stamp is rare. I'll buy it if you don't wreck it."], ["🧐", "Pre-1900? My loupe is tingling."]],
+  shiny: [["🤩", "Is that card SHINING? Oh, I need sunglasses for my monocle."], ["😊", "Shiny cards bring luck! Mostly to me, if you sell it."]],
+  combo: [["🤩", "A COMBO! I'm framing this moment!"], ["😭", "It's so beautiful I'm crying happy tears!"]],
+  gem: [["🤩", "GEM MINT?! Name your price! Actually, let me name it."], ["😊", "Perfect. Simply perfect. I need to sit down."]],
+  paradox: [["😧", "Wait… this seal is older than the stamp?! I need a historian. And a physicist."], ["🤨", "Time travel is NOT a valid postal service."]],
+  catastrophe: [["😭", "What have you DONE to that poor stamp?!"], ["😧", "I heard the tearing from my shop!"]],
+};

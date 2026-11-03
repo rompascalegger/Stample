@@ -789,3 +789,13 @@ body.ouch::before { background: rgba(220, 40, 40, .35) !important; }
 .hinge-heart span { font-family: var(--emoji); }
 .hinge-heart small { font-family: var(--type); color: var(--ink-soft); }
 @media (max-width: 560px) { .ws-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Mr. Hinge pops in when something rare turns up ---------- */
+.cameo { position: fixed; z-index: 42; right: 10px; bottom: 6px; display: flex; align-items: flex-end; flex-direction: row-reverse; gap: 6px; pointer-events: none; transform: translateX(130%) rotate(12deg); transition: transform .5s cubic-bezier(.3, 1.5, .5, 1); }
+.cameo.in { transform: translateX(0) rotate(-4deg); }
+.cameo-art { width: 130px; flex: none; font: 64px var(--emoji); }
+.cameo-art svg { width: 100%; display: block; filter: drop-shadow(4px 4px 0 rgba(90, 58, 34, .35)); }
+.cameo.in .cameo-art { animation: hingetalk .6s .4s cubic-bezier(.3, 1.6, .5, 1); }
+.cameo-say { position: relative; max-width: 220px; margin: 0 0 90px; background: #fff; border: 3px solid var(--brown); border-radius: 16px; padding: 8px 12px; font: 15px var(--type); color: var(--brown); box-shadow: 3px 3px 0 var(--mustard); }
+.cameo-say::after { content: ""; position: absolute; right: -12px; bottom: 16px; border: 8px solid transparent; border-left-color: var(--brown); }
+@media (max-width: 560px) { .cameo-art { width: 90px; } .cameo-say { max-width: 170px; margin-bottom: 60px; font-size: 13px; } }
