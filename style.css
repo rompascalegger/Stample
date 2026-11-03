@@ -13,9 +13,9 @@
   --blue: #2a5aa8;
   --gold: #e9a92b;
   --panel: rgba(255, 255, 255, .9);
-  --hand: "Caveat", "Segoe Print", cursive;
-  --type: "Special Elite", "Courier New", monospace;
-  --slab: "Alfa Slab One", Georgia, serif;
+  --hand: "Caveat", "Segoe Print", "Noto Color Emoji", "Segoe UI Emoji", cursive;
+  --type: "Special Elite", "Courier New", "Noto Color Emoji", "Segoe UI Emoji", monospace;
+  --slab: "Alfa Slab One", Georgia, "Noto Color Emoji", "Segoe UI Emoji", serif;
   --emoji: "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
 }
 
@@ -178,6 +178,11 @@ body.night .night-stars { opacity: 1; }
 .btn.icon { width: 40px; padding: 8px 0; }
 .btn.primary { background: linear-gradient(#ff7a6e, var(--red)); color: #fff; }
 .btn.primary:hover:not(:disabled) { background: #d9544b; }
+.btn.quick { background: linear-gradient(#fff7c8, #ffe27a); }
+.btn.quick b { font-family: var(--slab); font-weight: normal; display: inline-block; min-width: 3ch; text-align: right; }
+.btn.quick[data-odds="good"] b { color: #2f8a4a; }
+.btn.quick[data-odds="mid"] b { color: #c07a00; }
+.btn.quick[data-odds="bad"] b { color: #c8423a; }
 .btn.big { font-size: 20px; padding: 12px 22px; }
 .btn.off { text-decoration: line-through; opacity: .6; }
 .btn:focus-visible, .stamp-live:focus-visible, .slot:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
@@ -191,6 +196,12 @@ body.night .night-stars { opacity: 1; }
   background: var(--panel); border-radius: 10px; padding: 6px 12px; font-size: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
 }
 .card-meta b { font-weight: normal; font-family: var(--hand); font-size: 20px; }
+.card-mods { display: flex; gap: 4px; flex-wrap: wrap; }
+.mod { font-size: 12px; border-radius: 999px; padding: 1px 8px; background: #eef9fc; border: 1px solid #9ad8e6; white-space: nowrap; }
+.mod-sticky { background: #fff2cf; border-color: #f0c040; }
+.mod-shiny { background: linear-gradient(90deg, #fff6b0, #ffe0f0, #d8f6ff); border-color: #f0b020; animation: rainbow 2s linear infinite; background-size: 200% 100%; }
+.mod-windy { background: #f0f4ff; border-color: #a8b8e8; }
+.mod-sandy { background: #fff1d6; border-color: #e8b96a; }
 .chain { font-family: var(--emoji); font-size: 18px; display: flex; align-items: center; gap: 2px; }
 .chain i { font-family: var(--type); color: var(--ink-soft); font-style: normal; font-size: 13px; }
 .chain .dest { outline: 2px dashed var(--red); outline-offset: 1px; border-radius: 3px; }
@@ -211,6 +222,15 @@ body.night .night-stars { opacity: 1; }
 @keyframes arrive { from { transform: translate(60%, -40%) rotate(14deg); opacity: 0; } }
 @keyframes leave { to { transform: translate(-70%, 30%) rotate(-16deg); opacity: 0; } }
 @keyframes shake { 25% { transform: translateX(-1.2%) rotate(-1.5deg); } 50% { transform: translateX(1.2%); } 75% { transform: translateX(-.6%) rotate(-.4deg); } }
+.postcard.gust { animation: gust .6s ease-out; }
+@keyframes gust { 30% { transform: rotate(-3.5deg) translate(-2%, -1%) skewX(-2deg); } 60% { transform: rotate(1.5deg); } }
+.postcard.mod-wet .back { background: radial-gradient(ellipse 40% 30% at 20% 70%, rgba(80, 160, 220, .18), transparent 70%), radial-gradient(ellipse 25% 35% at 75% 85%, rgba(80, 160, 220, .14), transparent 70%), var(--paper); }
+.postcard.mod-wet .pc-message p { filter: blur(.35px); }
+.postcard.mod-sandy .back::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(200, 150, 70, .55) .6px, transparent 1.1px) 0 0 / 9px 11px, radial-gradient(circle, rgba(170, 120, 50, .4) .7px, transparent 1.2px) 4px 5px / 13px 9px; mask: linear-gradient(160deg, transparent 30%, #000 80%); }
+.postcard.mod-sticky .glue { background: rgba(240, 190, 60, .45); }
+.postcard.mod-shiny .back::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5; mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 240, 150, .9) 45%, rgba(255, 180, 230, .8) 52%, rgba(160, 230, 255, .8) 58%, transparent 72%) 0 0 / 250% 100%; animation: shine 3s linear infinite; }
+@keyframes shine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 body.hula .postcard { animation: hula 1.2s ease-in-out infinite; }
 @keyframes hula { 50% { transform: rotate(3deg) translateX(2%); } }
 
@@ -252,7 +272,19 @@ body.hula .postcard { animation: hula 1.2s ease-in-out infinite; }
 .work { position: absolute; left: -14%; top: -11.667%; width: 128%; height: 123.333%; z-index: 3; touch-action: none; cursor: crosshair; overflow: visible; }
 .work .cutline { fill: none; stroke: #5a6c9a; stroke-width: 1.2; stroke-dasharray: 2.5 2.5; animation: march 1s linear infinite; }
 @keyframes march { to { stroke-dashoffset: -10; } }
-.work .cutdone { fill: none; stroke: #b0412e; stroke-width: 1.8; stroke-linejoin: round; stroke-dasharray: 3 .8; }
+/* The ripped part of the line: white paper fibers around a dark gap, with loose hairs */
+.work .tear-fiber polyline { fill: none; stroke: #fffdf6; stroke-width: 3.2; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(.5px 1.2px .6px rgba(90, 60, 20, .55)); }
+.work .tear-hair line { stroke: #fffdf6; stroke-width: .7; stroke-linecap: round; }
+.work .tear-gap polyline { fill: none; stroke: #5a3a1e; stroke-width: 1.2; stroke-linejoin: round; opacity: .9; }
+.work .cursor-sc { font-size: 13px; fill: #c8423a; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .4)); pointer-events: none; }
+.work .cursor-sc.shut { font-size: 11px; }
+.work .residue { fill: #f1e2a6; stroke: #e0c97c; stroke-width: .4; opacity: .95; }
+.work .strand { fill: none; stroke: #fff4c2; stroke-width: .9; stroke-linecap: round; opacity: .85; animation: wiggle .3s ease-in-out infinite alternate; }
+@keyframes wiggle { to { stroke-width: .5; opacity: .6; } }
+.stamp-spot.popout { animation: popout .75s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes popout { 0% { transform: scale(1); } 35% { transform: scale(1.22) rotate(-5deg); } 70% { transform: scale(.96) rotate(2deg); } 100% { transform: scale(1); } }
+.stowaway { position: absolute; left: 30%; top: 40%; z-index: 4; font: 7cqw var(--emoji); animation: scuttle 2.5s ease-in forwards; pointer-events: none; }
+@keyframes scuttle { 0% { transform: translate(0, 0) scale(.3); } 15% { transform: translate(0, 0) scale(1); } 30% { transform: translate(-40%, 10%) rotate(-10deg); } 45% { transform: translate(-90%, 0) rotate(10deg); } 100% { transform: translate(-600%, 80%) rotate(-10deg); opacity: 0; } }
 .work .scissors { font-size: 10px; fill: #222; animation: snip .6s ease-in-out infinite alternate; }
 @keyframes snip { to { opacity: .4; } }
 .work .curl { fill: #efe4cc; stroke: #c8b89a; stroke-width: .6; filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, .35)); }

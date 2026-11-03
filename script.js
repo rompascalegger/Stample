@@ -124,51 +124,77 @@ function save() {
 
 // ---------- Sound ----------
 
-let actx = null;
+// Everything goes through one soft bus: a gentle low-pass and a compressor take the edge off every sound
+let actx = null, bus = null;
 function audio() {
   if (!S.sound) return null;
   try {
-    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      const lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 4800; lp.Q.value = 0.5;
+      const comp = actx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 4;
+      bus = actx.createGain(); bus.gain.value = 0.75;
+      bus.connect(lp).connect(comp).connect(actx.destination);
+    }
     if (actx.state === "suspended") actx.resume();
   } catch (e) { return null; }
   return actx;
 }
-function noise(dur, { freq = 2000, q = 1, type = "bandpass", vol = 0.2, delay = 0 } = {}) {
+function noise(dur, { freq = 2000, q = 1, type = "bandpass", vol = 0.2, delay = 0, to = null } = {}) {
   const a = audio(); if (!a) return;
   const len = Math.max(1, Math.floor(a.sampleRate * dur));
   const buf = a.createBuffer(1, len, a.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < len; i++) d[i] = rand() * 2 - 1;
   const src = a.createBufferSource(); src.buffer = buf;
-  const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const f = a.createBiquadFilter(); f.type = type; f.Q.value = q;
   const g = a.createGain();
   const t = a.currentTime + delay;
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(f).connect(g).connect(a.destination);
+  f.frequency.setValueAtTime(freq, t);
+  if (to) f.frequency.exponentialRampToValueAtTime(to, t + dur);
+  // A soft attack instead of a click
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, dur / 3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(bus);
   src.start(t);
 }
-function tone(freq, dur, { type = "sine", vol = 0.12, delay = 0, to = null } = {}) {
+function tone(freq, dur, { type = "sine", vol = 0.12, delay = 0, to = null, wobble = 0 } = {}) {
   const a = audio(); if (!a) return;
   const o = a.createOscillator(); o.type = type;
   const g = a.createGain();
   const t = a.currentTime + delay;
   o.frequency.setValueAtTime(freq, t);
   if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  if (wobble) {
+    // Cartoon vibrato
+    const lfo = a.createOscillator(), lg = a.createGain();
+    lfo.frequency.value = 18; lg.gain.value = wobble;
+    lfo.connect(lg).connect(o.frequency);
+    lfo.start(t); lfo.stop(t + dur + 0.05);
+  }
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(a.destination);
+  o.connect(g).connect(bus);
   o.start(t); o.stop(t + dur + 0.05);
 }
 const sfx = {
-  paper() { noise(0.35, { freq: 1800, q: 0.6, vol: 0.22 }); },
-  peel(speed) { noise(0.05, { freq: 2200 + speed * 2500, q: 3, vol: 0.04 + Math.min(0.14, speed * 0.1) }); },
-  tear() { noise(0.28, { type: "highpass", freq: 1400, vol: 0.5 }); noise(0.14, { freq: 500, vol: 0.3, delay: 0.04 }); },
-  pop() { tone(500, 0.14, { to: 950, vol: 0.14 }); noise(0.08, { freq: 3200, vol: 0.12 }); },
-  thunk() { tone(120, 0.2, { type: "triangle", vol: 0.3, to: 55 }); noise(0.07, { freq: 400, vol: 0.25 }); },
-  chime(stars) { [523, 659, 784, 1047, 1319, 1568].slice(0, stars + 1).forEach((f, i) => tone(f, 0.45, { delay: i * 0.09, vol: 0.1, type: "triangle" })); },
-  flip() { noise(0.22, { freq: 1100, q: 0.7, vol: 0.18 }); },
+  paper() { noise(0.4, { freq: 900, q: 0.5, vol: 0.12, to: 1800 }); },
+  peel(speed) { noise(0.06, { freq: 1100 + speed * 900, q: 2, vol: 0.025 + Math.min(0.05, speed * 0.04) }); },
+  // A soft zipper whose pitch climbs as the tear-out goes around
+  rip(p, speed) { noise(0.07, { freq: 700 + p * 1300 + speed * 300, q: 4, vol: 0.05 }); tone(300 + p * 500, 0.05, { vol: 0.015, type: "triangle" }); },
+  // A cartoon "oops": a soft paper fwip and a sliding-down whistle
+  tear() { noise(0.2, { freq: 1200, q: 1, vol: 0.12, to: 400 }); tone(620, 0.35, { to: 220, vol: 0.08, type: "triangle", wobble: 12 }); },
+  pop() { tone(420, 0.12, { to: 900, vol: 0.12 }); tone(900, 0.08, { vol: 0.05, delay: 0.07 }); },
+  // A rubber band boing when glue strands let go
+  snap() { tone(260, 0.4, { to: 180, vol: 0.12, type: "triangle", wobble: 30 }); noise(0.05, { freq: 1500, vol: 0.05 }); },
+  thunk() { tone(140, 0.2, { type: "sine", vol: 0.25, to: 70 }); },
+  chime(stars) { [523, 659, 784, 1047, 1319, 1568].slice(0, stars + 1).forEach((f, i) => tone(f, 0.5, { delay: i * 0.09, vol: 0.08, type: "sine" })); },
+  flip() { noise(0.25, { freq: 700, q: 0.6, vol: 0.1, to: 1500 }); },
+  whoosh() { noise(0.6, { freq: 400, q: 0.7, vol: 0.12, to: 1400 }); },
+  sparkle() { [1568, 2093, 2637, 2093].forEach((f, i) => tone(f, 0.18, { delay: i * 0.06, vol: 0.04 })); },
+  squelch() { tone(180, 0.25, { to: 90, vol: 0.12, type: "triangle", wobble: 20 }); },
 };
 
 // ---------- Stamp drawing (SVG, 100 × 120 units) ----------
@@ -262,6 +288,7 @@ const SPECIALS = [
   { key: "antique", name: "ANTIQUE", emoji: "🕰️", pts: 3, text: "issued before 1900", test: (x) => x.st.year < 1900 },
   { key: "legend", name: "LEGENDARY", emoji: "👑", pts: 5, text: "a famous stamp of philately", test: (x) => x.st.rarity === "legendary" },
   { key: "surgeon", name: "SURGEON", emoji: "✂️", pts: 3, text: "a flawless cut", test: (x) => x.cut >= 0.95 },
+  { key: "shiny", name: "SHINY CARD", emoji: "🌟", pts: 5, text: "it came on a shiny postcard", test: (x) => !!x.shiny },
 ];
 const SPECIAL = Object.fromEntries(SPECIALS.map((sp) => [sp.key, sp]));
 const COMBOS = [
@@ -279,7 +306,7 @@ function score(st, mark, tears, extra = {}) {
   const cutPts = Math.round(10 * cut);
   const luck = Math.max(0, 1 - Math.hypot(mark.ox / 46, mark.oy / 56));
   const luckPts = Math.round(20 * luck);
-  const x = { st, mark, luck, cut, to: extra.to, today: extra.today };
+  const x = { st, mark, luck, cut, to: extra.to, today: extra.today, shiny: extra.shiny };
   const sp = SPECIALS.filter((s) => s.test(x)).map((s) => s.key);
   const spPts = Math.min(35, sp.reduce((n, k) => n + SPECIAL[k].pts, 0));
   const combo = COMBOS.find((c) => c.keys.every((k) => sp.includes(k))) || null;
@@ -319,6 +346,16 @@ function writeText(f, t, p) {
   return { lines, ps: rand() < 0.45 ? fill(pick(TEXT_PS)) : "", sign: `${f.bye},\n${callName(f)}` };
 }
 
+// Card gimmicks: each card may come with a few. The crab is a secret stowaway, so it gets no badge.
+const MODS = {
+  sticky: { emoji: "🍯", name: "Extra sticky", chance: 0.12 },
+  wet: { emoji: "💧", name: "Got wet at sea", chance: 0.12 },
+  windy: { emoji: "💨", name: "Windy day", chance: 0.15 },
+  sandy: { emoji: "🏖️", name: "Sandy and scratchy", chance: 0.1 },
+  shiny: { emoji: "🌟", name: "Shiny!", chance: 0.06 },
+  crab: { emoji: "", name: "", chance: 0.07 },
+};
+
 function makeCard(from, prev) {
   const f = BY_CODE[from];
   let to;
@@ -326,7 +363,7 @@ function makeCard(from, prev) {
   const st = pickStamp(f);
   const angle = rand() * Math.PI * 2;
   const r = Math.pow(rand(), 0.75);
-  return {
+  const card = {
     no: ++S.cardNo, from, to, prev, stampId: st.id,
     mark: {
       code: rand() < 0.3 ? from : pick(COUNTRIES).code,
@@ -341,6 +378,12 @@ function makeCard(from, prev) {
     text: writeText(f, BY_CODE[to], prev ? BY_CODE[prev] : null),
     hue: ri(0, 359),
   };
+  card.mods = Object.keys(MODS).filter((k) => rand() < MODS[k].chance);
+  if (card.mods.includes("sticky") && card.mods.includes("wet")) card.mods = card.mods.filter((k) => k !== "wet");
+  if (card.mods.includes("sticky")) card.glue = Math.round(card.glue * 1.4 * 100) / 100;
+  if (card.mods.includes("wet")) card.glue = Math.round(card.glue * 0.65 * 100) / 100;
+  card.shiny = card.mods.includes("shiny");
+  return card;
 }
 
 // ---------- Desk ----------
@@ -358,7 +401,10 @@ const CORNERS = [[0, 0], [100, 0], [100, 120], [0, 120]];
 const peel = {
   strain: 0, maxStrain: 0, active: false, x: 0, y: 0, t: 0, lastSound: 0, lastNag: 0,
   bins: [], devSum: 0, devLen: 0, inside: 0, grab: false,
+  bits: [], pull: 0, streak: 0, streakLevel: 0, snip: false, angle: 0, lastSnip: 0,
 };
+// Steady-hand streaks while cutting: units traced along the line without slipping off or rushing
+const STREAKS = [[70, "Steady!"], [180, "Smooth hands!"], [320, "Like butter! 🧈"]];
 
 const phase = () => !S.card ? "none" : S.card.done ? "done" : S.card.cut == null ? "cut" : "peel";
 const activeCorner = () => S.card.corners.findIndex((c) => c < 1);
@@ -384,10 +430,21 @@ function renderCard() {
       <span class="front-flag">${flag(f.code)}</span>
     </div>`;
   $("card-no").innerHTML = `Postcard #${card.no} · from ${flagHtml(f.code)} <b>${esc(f.person)}</b>, ${esc(f.city)}`;
+  const mods = card.mods || [];
+  $("card-mods").innerHTML = mods.filter((k) => MODS[k] && MODS[k].emoji)
+    .map((k) => `<span class="mod mod-${k}" title="${esc(MODS[k].name)}">${MODS[k].emoji} ${esc(MODS[k].name)}</span>`).join("");
+  for (const k of ["wet", "sandy", "shiny", "sticky"]) postcard.classList.toggle("mod-" + k, mods.includes(k));
+  gustIn = 4000 + rand() * 4000;
+  if (mods.includes("shiny") && !card.done) setTimeout(sfx.sparkle, 400);
   const chain = [...S.chain.slice(-5), card.from, card.to];
   $("chain").innerHTML = chain.map((c, i) => `<span class="${i === chain.length - 1 ? "dest" : ""}" title="${esc(BY_CODE[c]?.name || "?")}">${flag(c)}</span>`).join("<i>›</i>");
 
-  Object.assign(peel, { strain: 0, maxStrain: 0, active: false, bins: new Array(BINS).fill(false), devSum: 0, devLen: 0, inside: 0, grab: false });
+  Object.assign(peel, {
+    strain: 0, maxStrain: 0, active: false, bins: new Array(BINS).fill(false), devSum: 0, devLen: 0, inside: 0, grab: false,
+    bits: [], pull: 0, streak: 0, streakLevel: 0,
+  });
+  $("work-bits").innerHTML = "";
+  drawScissors(null);
   requestAnimationFrame(fitMessage);
   stampEl.classList.toggle("gone", card.done);
   stampEl.classList.remove("peeled", "tense");
@@ -446,34 +503,103 @@ function cutNearest(x, y) {
   return { d, s };
 }
 
-// The dotted line, the torn part of it and the scissors; later the curling corners and the glowing handle
+// Which way is "outward" from the tear-out line at a point along it
+function cutNormal(s) {
+  s = ((s % CUT_P) + CUT_P) % CUT_P;
+  if (s < CUT_W) return [0, 1];
+  if (s < CUT_W + CUT_H) return [1, 0];
+  if (s < 2 * CUT_W + CUT_H) return [0, 1];
+  return [1, 0];
+}
+// The same wobble every time for the same spot of the same card
+const jitter = (i, k) => { const v = Math.sin(i * 12.9898 + k * 78.233 + S.card.no * 3.17) * 43758.5453; return v - Math.floor(v) - 0.5; };
+const f1 = (v) => v.toFixed(1);
+
+// The dotted line, the ripped part of it (white fibers around a dark gap) and the scissors;
+// later the corners: glue left on the card, stretchy glue strands and the folded-back flap
 function renderWork() {
   const ph = phase();
   let html = "";
   if (ph === "cut") {
     html += `<rect class="cutline" x="${CUT.x0}" y="${CUT.y0}" width="${CUT_W}" height="${CUT_H}"/>`;
     const L = CUT_P / BINS;
+    let fibers = "", gaps = "", hairs = "";
     peel.bins.forEach((on, i) => {
       if (!on) return;
-      const pts = [0, 0.5, 1].map((k) => cutPoint(i * L + k * L * 0.999).map((v) => v.toFixed(1)).join(","));
-      html += `<polyline class="cutdone" points="${pts.join(" ")}"/>`;
+      const pts = [];
+      for (let k = 0; k <= 6; k++) {
+        const s = i * L + (k / 6) * L * 0.999;
+        const [px, py] = cutPoint(s);
+        const [nx, ny] = cutNormal(s);
+        const j = jitter(i, k) * 1.8;
+        pts.push(`${f1(px + nx * j)},${f1(py + ny * j)}`);
+      }
+      fibers += `<polyline points="${pts.join(" ")}"/>`;
+      gaps += `<polyline points="${pts.join(" ")}"/>`;
+      const s = i * L + L * (0.3 + 0.4 * (jitter(i, 9) + 0.5));
+      const [hx, hy] = cutPoint(s), [nx, ny] = cutNormal(s), side = jitter(i, 11) > 0 ? 1 : -1;
+      hairs += `<line x1="${f1(hx)}" y1="${f1(hy)}" x2="${f1(hx + nx * side * 2.6 + ny * 0.8)}" y2="${f1(hy + ny * side * 2.6 + nx * 0.8)}"/>`;
     });
+    html += `<g class="tear-fiber">${fibers}</g><g class="tear-hair">${hairs}</g><g class="tear-gap">${gaps}</g>`;
     const next = peel.bins.indexOf(false);
-    if (next >= 0) {
+    if (next >= 0 && !peel.active) {
       const [nx, ny] = cutPoint(next * L + L / 2);
-      html += `<text class="scissors" x="${nx.toFixed(1)}" y="${(ny + 3).toFixed(1)}" text-anchor="middle">✂</text>`;
+      html += `<text class="scissors" x="${f1(nx)}" y="${f1(ny + 3)}" text-anchor="middle">✂</text>`;
     }
   } else if (ph === "peel") {
-    S.card.corners.forEach((c, i) => {
-      if (c <= 0) return;
-      const [cx, cy] = CORNERS[i];
-      const k = 4 + c * 22, sx = cx ? -1 : 1, sy = cy ? -1 : 1;
-      html += `<polygon class="curl" points="${cx + sx * k},${cy} ${cx},${cy + sy * k} ${cx + sx * k},${cy + sy * k}"/>`;
-    });
     const a = activeCorner();
+    S.card.corners.forEach((c, i) => {
+      const pull = i === a ? peel.pull : 0;
+      if (c <= 0 && pull <= 0.3) return;
+      const [cx, cy] = CORNERS[i];
+      const k = 4 + c * 22 + pull, sx = cx ? -1 : 1, sy = cy ? -1 : 1;
+      const tx = cx + sx * k, ty = cy + sy * k;
+      html += `<polygon class="residue" points="${cx},${cy} ${f1(tx)},${cy} ${cx},${f1(ty)}"/>`;
+      if (i === a) {
+        // Glue strands between the card and the underside of the flap, stretching as you pull
+        for (const f of [0.25, 0.5, 0.75]) {
+          const bx = cx + sx * k * f * 0.5, by = cy + sy * k * (1 - f) * 0.5;
+          const ex = tx - sx * k * (1 - f) * 0.5, ey = ty - sy * k * f * 0.5;
+          const sag = 1 + pull * 0.25;
+          html += `<path class="strand" d="M${f1(bx)},${f1(by)} Q${f1((bx + ex) / 2 + sag)},${f1((by + ey) / 2 + sag)} ${f1(ex)},${f1(ey)}"/>`;
+        }
+      }
+      html += `<polygon class="curl" points="${f1(tx)},${cy} ${cx},${f1(ty)} ${f1(tx)},${f1(ty)}"/>`;
+    });
     if (a >= 0) html += `<circle class="handle" cx="${CORNERS[a][0]}" cy="${CORNERS[a][1]}" r="7"/>`;
   }
-  workEl.innerHTML = html;
+  $("work-main").innerHTML = html;
+}
+
+// Paper crumbs and glue flecks: x, y in stamp units, speeds in units per ms
+function spawnBits(x, y, n, { colors = ["#fbf6ea", "#efe2c4", "#fff"], spread = 1, up = 0 } = {}) {
+  for (let i = 0; i < n; i++) {
+    peel.bits.push({
+      x, y, vx: (rand() - 0.5) * 0.14 * spread, vy: (rand() - 0.75) * 0.14 * spread - up,
+      r: rand() * 360, vr: (rand() - 0.5) * 0.7, age: 0, life: 700 + rand() * 700,
+      w: 1 + rand() * 2, c: pick(colors),
+    });
+  }
+  if (peel.bits.length > 160) peel.bits.splice(0, peel.bits.length - 160);
+}
+function stepBits(dt) {
+  if (!peel.bits.length) return;
+  for (const b of peel.bits) {
+    b.age += dt;
+    b.vy += 0.0004 * dt;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    b.r += b.vr * dt;
+  }
+  peel.bits = peel.bits.filter((b) => b.age < b.life);
+  $("work-bits").innerHTML = peel.bits.map((b) =>
+    `<rect x="${f1(b.x)}" y="${f1(b.y)}" width="${f1(b.w)}" height="${f1(b.w * 0.6)}" fill="${b.c}" opacity="${(1 - b.age / b.life).toFixed(2)}" transform="rotate(${Math.round(b.r)} ${f1(b.x)} ${f1(b.y)})"/>`).join("");
+}
+
+// The scissors follow your finger while you cut, pointing the way you go
+function drawScissors(x, y, angle) {
+  $("work-cursor").innerHTML = x == null ? "" :
+    `<text class="cursor-sc${peel.snip ? " shut" : ""}" x="${f1(x)}" y="${f1(y)}" text-anchor="middle" dominant-baseline="central" transform="rotate(${Math.round(angle + 180)} ${f1(x)} ${f1(y)})">✂</text>`;
 }
 
 function progress() {
@@ -492,12 +618,16 @@ function updateMeters() {
   const t = S.card ? S.card.tears.length : 0;
   $("tears").textContent = t ? "✂".repeat(Math.min(t, 4)) : "♡";
   $("tears").title = t ? `${t} tear${t > 1 ? "s" : ""}: ${condName(t)}` : "No tears yet: mint";
+  updateQuick();
   if (phase() !== "peel") return;
   stampEl.style.setProperty("--lift", (p / 100).toFixed(3));
   stampEl.classList.toggle("tense", peel.strain > 70);
 }
 
 function fragility(st) { return 1 + (NOW_YEAR - st.year) / 150; }
+// Sand in the glue makes everything scratchier
+function cardFrag() { return fragility(STAMPS[S.card.stampId]) * (hasMod("sandy") ? 1.25 : 1); }
+const hasMod = (k) => !!(S.card && S.card.mods && S.card.mods.includes(k));
 
 function nag(text) {
   const now = performance.now();
@@ -514,10 +644,11 @@ function rustle(speed) {
 
 // ① Tracing the tear-out line: dist in stamp units, speed in units per ms
 function cutStep(x, y, dist, speed) {
-  const frag = fragility(STAMPS[S.card.stampId]);
+  const frag = cardFrag();
   // Drawing across the stamp itself cuts into it
   if (x > 5 && x < 95 && y > 5 && y < 115) {
     peel.inside += dist;
+    peel.streak = 0; peel.streakLevel = 0;
     if (peel.inside > 18) { peel.inside = 0; tear("✂ you cut into the stamp!"); }
     updateMeters();
     return;
@@ -527,12 +658,27 @@ function cutStep(x, y, dist, speed) {
   peel.strain += Math.max(0, speed - safe) * dist * 1.6 * frag;
   if (d < 16) { peel.devSum += d * dist; peel.devLen += dist; }
   if (d < 6) {
-    rustle(speed);
-    if (speed > safe * 1.7) nag("Too fast! Tear it slowly");
-    else {
+    const now = performance.now();
+    if (now - peel.lastSound > 40) { sfx.rip(progress(), speed); peel.lastSound = now; }
+    if (rand() < 0.35) spawnBits(x, y, 1);
+    if (speed > safe * 1.7) {
+      nag("Too fast! Tear it slowly");
+      peel.streak = 0; peel.streakLevel = 0;
+    } else {
       const b = Math.floor(s / (CUT_P / BINS)) % BINS;
-      if (!peel.bins[b]) { peel.bins[b] = true; renderWork(); }
+      if (!peel.bins[b]) { peel.bins[b] = true; spawnBits(x, y, 3); renderWork(); }
+      peel.streak += dist;
+      const next = STREAKS[peel.streakLevel];
+      if (next && peel.streak >= next[0]) {
+        peel.streakLevel++;
+        toast(next[1], "good");
+        tone(660 + peel.streakLevel * 220, 0.18, { type: "triangle", vol: 0.1 });
+        spawnBits(x, y, 8, { colors: ["#ffd23f", "#29c4e0", "#ff6b6b"], spread: 1.6 });
+        if (peel.streakLevel === STREAKS.length) egg("butter", "Like butter: one long, perfectly steady cut");
+      }
     }
+  } else if (d > 9) {
+    peel.streak = 0; peel.streakLevel = 0;
   }
   peel.maxStrain = Math.max(peel.maxStrain, peel.strain);
   if (peel.strain >= 100) tear();
@@ -546,9 +692,20 @@ function finishCut() {
   card.cut = Math.round(Math.max(0, Math.min(1, 1 - dev / 7)) * 100) / 100;
   peel.active = false;
   peel.strain = 0;
+  drawScissors(null);
   noise(0.45, { freq: 2600, q: 0.8, vol: 0.3 });
+  sfx.pop();
   toast(`✂ Cut out! ${cutName(card.cut)}`, card.cut >= 0.8 ? "good" : "");
-  $("stamp-spot").classList.add("cut");
+  // The piece pops loose with a puff of paper crumbs all along the torn edge
+  for (let i = 0; i < 24; i++) {
+    const [px, py] = cutPoint((i / 24) * CUT_P);
+    spawnBits(px, py, 2, { spread: 1.8, up: 0.05 });
+  }
+  const spot = $("stamp-spot");
+  spot.classList.add("cut");
+  spot.classList.remove("popout"); void spot.offsetWidth; spot.classList.add("popout");
+  setTimeout(() => spot.classList.remove("popout"), 800);
+  if (hasMod("crab")) setTimeout(stowaway, 500);
   save();
   setHint();
   renderWork();
@@ -559,7 +716,7 @@ function finishCut() {
 function cornerStep(x, y, dx, dy, dist, speed) {
   if (!peel.grab) return;
   const card = S.card;
-  const frag = fragility(STAMPS[card.stampId]);
+  const frag = cardFrag();
   const a = activeCorner();
   const [cx, cy] = CORNERS[a];
   if (Math.hypot(x - cx, y - cy) > 70) { peel.grab = false; return; }
@@ -569,7 +726,10 @@ function cornerStep(x, y, dx, dy, dist, speed) {
   if (dot > 0.55) {
     card.corners[a] = Math.min(1, card.corners[a] + dist * dot / (110 * card.glue));
     peel.strain += dist * 0.05 + Math.max(0, speed - safe) * dist * 1.4 * frag;
+    // The flap stretches with your pull and springs back when you let go
+    peel.pull = Math.min(12, peel.pull + dist * dot * 0.18);
     rustle(speed);
+    if (rand() < 0.15) spawnBits(cx + (50 - cx) * 0.2, cy + (60 - cy) * 0.2, 1, { colors: ["#f3e3a8", "#fff6d0"] });
   } else {
     peel.strain += dist * 0.4;
     nag("Wrong way! Pull toward the middle");
@@ -583,6 +743,11 @@ function cornerStep(x, y, dx, dy, dist, speed) {
 
 function cornerDone(a) {
   peel.grab = false;
+  peel.pull = 0;
+  // The glue strands snap
+  sfx.snap();
+  const [cx, cy] = CORNERS[a];
+  spawnBits(cx + (50 - cx) * 0.25, cy + (60 - cy) * 0.25, 10, { colors: ["#f3e3a8", "#fff6d0", "#fbf6ea"], spread: 1.5 });
   tone(700 + a * 150, 0.15, { type: "triangle" });
   save();
   if (a === 3) finishPeel();
@@ -595,7 +760,14 @@ function tear(msg) {
   peel.strain = 35;
   sfx.tear();
   toast(msg || pick(TEAR_QUIPS), "bad");
-  stampEl.innerHTML = stampSVG(STAMPS[card.stampId], { mark: card.mark, tears: card.tears });
+  const st = STAMPS[card.stampId];
+  stampEl.innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
+  // Shreds of the stamp itself fly off where it tore
+  const t = card.tears[card.tears.length - 1];
+  const along = 18 + t.p * 52;
+  const [tx, ty] = [[along, 2], [98, along + 10], [along, 118], [2, along + 10]][t.s];
+  spawnBits(tx, ty, 14, { colors: [look(st).ink, look(st).tint, "#fbf6ea"], spread: 2.2, up: 0.04 });
+  peel.streak = 0; peel.streakLevel = 0;
   postcard.classList.remove("shake"); void postcard.offsetWidth; postcard.classList.add("shake");
   save();
   if (card.tears.length >= 4) egg("confetti", "Confetti maker: that stamp is more hole than stamp");
@@ -621,7 +793,7 @@ function finishPeel() {
   else status = "DUPLICATE";
   if (!old || sc.q > old.q) {
     S.album[st.id] = {
-      q: sc.q, tears: card.tears, mark: card.mark, cut: card.cut, to: card.to, today: card.today, sp: sc.sp,
+      q: sc.q, tears: card.tears, mark: card.mark, cut: card.cut, to: card.to, today: card.today, shiny: card.shiny, sp: sc.sp,
       n: (old ? old.n : 0) + 1, from: card.from, t: Date.now(),
     };
   } else old.n++;
@@ -632,14 +804,18 @@ function finishPeel() {
 
   sfx.pop();
   stampEl.classList.add("peeled");
-  workEl.innerHTML = "";
+  $("work-main").innerHTML = "";
+  spawnBits(50, 60, 26, { colors: ["#f3e3a8", "#fff6d0", look(st).tint], spread: 2.4, up: 0.08 });
   $("glue").classList.add("show");
   stampEl.disabled = true;
   $("next-btn").disabled = false;
   $("hint").textContent = "Got it!";
+  // Skip the show if the player already moved on to the next card
+  const result = () => { if (S.card === card) showResult(st, sc, status, old); };
   setTimeout(() => {
-    if (sc.sp.length) playAlerts(sc, () => showResult(st, sc, status, old));
-    else showResult(st, sc, status, old);
+    if (S.card !== card) return;
+    if (sc.sp.length) playAlerts(sc, result);
+    else result();
   }, 650);
 }
 
@@ -673,8 +849,9 @@ function playAlerts(sc, done) {
   show();
 }
 function fanfare(mega) {
-  [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: "square", vol: 0.05, delay: i * 0.07 }));
-  noise(0.4, { freq: 3000, q: 0.5, vol: 0.12 });
+  [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, { type: "triangle", vol: 0.08, delay: i * 0.07 }));
+  sfx.whoosh();
+  tone(1047, 0.5, { delay: 0.3, vol: 0.06, wobble: 25 });
   if (mega) [1319, 1568, 2093, 2637].forEach((f, i) => tone(f, 0.5, { type: "triangle", vol: 0.09, delay: 0.3 + i * 0.12 }));
 }
 
@@ -730,6 +907,108 @@ function nextCard() {
   }, 380);
 }
 
+// ---------- Quick rip ----------
+
+// One yank, no minigame. The odds drop for old, rare, already torn or well-glued stamps.
+function quickChance(card) {
+  const st = STAMPS[card.stampId];
+  let c = 0.95 - (NOW_YEAR - st.year) * 0.0032 - (card.glue - 0.8) * 0.45 - card.tears.length * 0.08 -
+    { legendary: 0.15, rare: 0.06, uncommon: 0.02, common: 0 }[st.rarity];
+  if (card.cut != null) c += 0.08;
+  c += (card.corners || []).filter((k) => k >= 1).length * 0.03;
+  if (card.mods && card.mods.includes("sandy")) c -= 0.05;
+  return Math.max(0.05, Math.min(0.95, c));
+}
+
+function updateQuick() {
+  if (peel.rolling) return;
+  const btn = $("quick-btn");
+  const ph = phase();
+  btn.disabled = ph !== "cut" && ph !== "peel";
+  if (btn.disabled) { $("quick-pct").textContent = "–"; btn.dataset.odds = ""; return; }
+  const c = quickChance(S.card);
+  $("quick-pct").textContent = Math.round(c * 100) + "%";
+  btn.dataset.odds = c >= 0.7 ? "good" : c >= 0.35 ? "mid" : "bad";
+}
+
+function quickRip() {
+  const ph = phase();
+  if ((ph !== "cut" && ph !== "peel") || flipped || peel.rolling) return;
+  audio();
+  const card = S.card;
+  const chance = quickChance(card);
+  const roll = rand();
+  peel.rolling = true;
+  peel.active = false;
+  $("quick-btn").disabled = true;
+  // A little drumroll of numbers first
+  let n = 0;
+  const tick = setInterval(() => {
+    $("quick-pct").textContent = ri(1, 99);
+    tone(600 + n * 35, 0.05, { vol: 0.04, type: "triangle" });
+    n++;
+  }, 65);
+  setTimeout(() => {
+    clearInterval(tick);
+    peel.rolling = false;
+    const ok = roll < chance;
+    const r = Math.round(roll * 100), need = Math.round(chance * 100);
+    sfx.whoosh();
+    card.corners = [1, 1, 1, 1];
+    if (ok) {
+      card.cut = Math.min(card.cut ?? 0.6, 0.6);
+      toast(`⚡ Clean rip! rolled ${r}, needed under ${need}`, "good");
+      spawnBits(50, 60, 20, { spread: 2.2, up: 0.06 });
+      if (chance < 0.25) egg("lucky", "Against the odds: a quick rip under 25% that worked");
+    } else {
+      const hits = ri(1, 3);
+      for (let i = 0; i < hits; i++) card.tears.push({ s: ri(0, 3), p: Math.round(rand() * 100) / 100 });
+      card.cut = Math.min(card.cut ?? 0.3, 0.3);
+      sfx.tear();
+      toast(`💥 RRRIP! rolled ${r}, needed under ${need}`, "bad");
+      const st = STAMPS[card.stampId];
+      stampEl.innerHTML = stampSVG(st, { mark: card.mark, tears: card.tears });
+      spawnBits(50, 60, 30, { colors: [look(st).ink, look(st).tint, "#fbf6ea"], spread: 2.6, up: 0.05 });
+      postcard.classList.remove("shake"); void postcard.offsetWidth; postcard.classList.add("shake");
+    }
+    peel.maxStrain = 100;
+    $("stamp-spot").classList.add("cut");
+    finishPeel();
+    updateQuick();
+  }, 750);
+}
+
+// ---------- Gimmicks during the work ----------
+
+let gustIn = 5000;
+function gimmickStep(dt) {
+  if (!hasMod("windy") || flipped || !$("splash").classList.contains("gone")) return;
+  const ph = phase();
+  if (ph !== "cut" && ph !== "peel") return;
+  gustIn -= dt;
+  if (gustIn > 0) return;
+  gustIn = 4000 + rand() * 6000;
+  sfx.whoosh();
+  toast("💨 Gust!", "bad");
+  postcard.classList.remove("gust"); void postcard.offsetWidth; postcard.classList.add("gust");
+  // A gust tugs at the paper; holding on with your finger (dragging right now) makes it worse
+  peel.strain += peel.active ? 30 : 14;
+  spawnBits(rand() * 100, rand() * 120, 6, { colors: ["#f7d58c", "#e9c27a"], spread: 2 });
+  if (peel.strain >= 100) tear("💨 the wind ripped it!");
+}
+
+function stowaway() {
+  const spot = $("stamp-spot");
+  const c = document.createElement("span");
+  c.className = "stowaway";
+  c.textContent = "🦀";
+  spot.appendChild(c);
+  tone(1500, 0.05, { type: "triangle", vol: 0.07 }); tone(1700, 0.05, { type: "triangle", vol: 0.07, delay: 0.1 });
+  toast("🦀 a tiny stowaway!", "good");
+  setTimeout(() => c.remove(), 2600);
+  egg("stowaway", "Stowaway: a tiny crab was hiding under the stamp");
+}
+
 // ---------- Cutting and peeling input ----------
 
 function toUnits(e) {
@@ -759,10 +1038,20 @@ workEl.addEventListener("pointermove", (e) => {
   const dist = Math.hypot(dx, dy);
   Object.assign(peel, { x, y, t: now });
   if (dist <= 0) return;
-  if (phase() === "cut") cutStep(x, y, dist, dist / dt);
+  if (phase() === "cut") {
+    if (dist > 0.4) peel.angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (now - peel.lastSnip > 110) { peel.snip = !peel.snip; peel.lastSnip = now; }
+    drawScissors(x, y, peel.angle);
+    cutStep(x, y, dist, dist / dt);
+  }
   else if (phase() === "peel") cornerStep(x, y, dx, dy, dist, dist / dt);
 });
-const stopPeel = () => { peel.active = false; peel.grab = false; };
+const stopPeel = () => {
+  peel.active = false;
+  peel.grab = false;
+  drawScissors(null);
+  if (phase() === "cut") renderWork();
+};
 workEl.addEventListener("pointerup", stopPeel);
 workEl.addEventListener("pointercancel", stopPeel);
 // Keyboard: gentle taps of Space work slowly and safely, holding it down (key repeat) is far too fast
@@ -798,6 +1087,13 @@ function frame(now) {
     peel.strain = Math.max(0, peel.strain - dt * 0.03);
     updateMeters();
   }
+  // A stretched flap springs back once you stop pulling
+  if (peel.pull > 0 && !peel.grab) {
+    peel.pull = Math.max(0, peel.pull - dt * 0.03);
+    renderWork();
+  }
+  stepBits(dt);
+  gimmickStep(dt);
   ballStep(dt);
   requestAnimationFrame(frame);
 }
@@ -959,6 +1255,7 @@ $("album-btn").addEventListener("click", () => { renderAlbum(); openModal("album
 $("r-album").addEventListener("click", () => { closeModal("result"); renderAlbum(); openModal("album"); });
 $("help-btn").addEventListener("click", () => openModal("help"));
 $("next-btn").addEventListener("click", nextCard);
+$("quick-btn").addEventListener("click", quickRip);
 $("r-next").addEventListener("click", nextCard);
 $("flip-btn").addEventListener("click", () => {
   flipped = !flipped;
@@ -976,7 +1273,7 @@ $("help-grades").innerHTML = GRADES.map(([min, name, gs]) => `<span><span class=
 // ---------- The beach and its secrets ----------
 
 const EGGS = ["sun", "shades", "volley10", "volley25", "crab", "gull", "bottle", "shells", "castle", "logo", "aloha", "pennytyped",
-  "gem", "dream", "zen", "penny", "answer", "nightowl", "umbrella", "confetti", "sos", "icecream", "flipflop", "palm"];
+  "gem", "dream", "zen", "penny", "answer", "nightowl", "umbrella", "confetti", "sos", "icecream", "flipflop", "palm", "butter", "stowaway", "lucky"];
 const BOTTLE_NOTES = [
   "The sun has a secret. Click it. A lot.",
   "There are five shells hidden on this beach.",
@@ -1071,10 +1368,10 @@ const CASTLE = ["🏰", "⛱️", "🛖", "🏯", "🏰"];
 $("castle").addEventListener("click", () => {
   const el = $("castle");
   let stage = +el.dataset.stage + 1;
-  noise(0.12, { freq: 500, q: 0.5, vol: 0.25 });
+  noise(0.15, { freq: 400, q: 0.6, vol: 0.12 });
   if (stage > 4) {
     stage = 0;
-    noise(0.9, { freq: 900, q: 0.4, vol: 0.3 });
+    noise(0.9, { freq: 500, q: 0.5, vol: 0.14, to: 1200 });
     toast("🌊 the tide took it");
   } else if (stage === 4) {
     egg("castle", "Architect: a real sandcastle");
@@ -1087,7 +1384,7 @@ $("castle").addEventListener("click", () => {
 $("umbrella").addEventListener("click", () => {
   const el = $("umbrella");
   el.textContent = el.textContent === "⛱️" ? "🌂" : "⛱️";
-  noise(0.15, { freq: 1500, vol: 0.15 });
+  noise(0.2, { freq: 700, vol: 0.08, to: 1400 });
   egg("umbrella", "Shady business: you folded the umbrella");
 });
 
@@ -1106,7 +1403,7 @@ $("icecream").addEventListener("click", () => {
 });
 let squeaks = 0;
 $("flipflop").addEventListener("click", () => {
-  tone(900 + squeaks * 60, 0.09, { type: "square", vol: 0.05, to: 1400 });
+  tone(700 + squeaks * 80, 0.12, { type: "triangle", vol: 0.08, to: 1200, wobble: 40 });
   $("flipflop").classList.remove("hop"); void $("flipflop").offsetWidth; $("flipflop").classList.add("hop");
   if (++squeaks === 5) egg("flipflop", "Flip-flop symphony: squeak squeak");
 });
@@ -1115,7 +1412,7 @@ $("palm").addEventListener("click", () => {
   c.className = "coconut";
   c.textContent = "🥥";
   $("palm").appendChild(c);
-  setTimeout(() => { noise(0.1, { freq: 300, vol: 0.4 }); toast("BONK!"); }, 650);
+  setTimeout(() => { tone(400, 0.25, { to: 150, vol: 0.14, wobble: 20 }); toast("BONK!"); }, 650);
   setTimeout(() => c.remove(), 2600);
   egg("palm", "Coconut bonk: shook the palm tree");
 });
@@ -1135,12 +1432,12 @@ function scheduleVisitors() {
 scheduleVisitors.crab = () => setTimeout(() => { visit("crab", "walk", 14500); scheduleVisitors.crab(); }, ri(45, 90) * 1000);
 scheduleVisitors.gull = () => setTimeout(() => { visit("gull", "fly", 12500); scheduleVisitors.gull(); }, ri(30, 70) * 1000);
 $("crab").addEventListener("click", () => {
-  tone(1800, 0.05, { type: "square", vol: 0.06 }); tone(1800, 0.05, { type: "square", vol: 0.06, delay: 0.09 });
+  tone(1500, 0.05, { type: "triangle", vol: 0.07 }); tone(1700, 0.05, { type: "triangle", vol: 0.07, delay: 0.09 });
   toast("🦀 snip snip!");
   egg("crab", "Crab whisperer: you caught the crab");
 });
 $("gull").addEventListener("click", () => {
-  tone(1400, 0.25, { type: "sawtooth", vol: 0.05, to: 900 }); tone(1500, 0.3, { type: "sawtooth", vol: 0.05, to: 800, delay: 0.25 });
+  tone(1300, 0.22, { type: "triangle", vol: 0.07, to: 900, wobble: 60 }); tone(1400, 0.28, { type: "triangle", vol: 0.07, to: 800, delay: 0.25, wobble: 60 });
   toast("MINE! MINE!");
   egg("gull", "Gull-ible: the seagull wants your stamps");
 });
@@ -1148,7 +1445,7 @@ function washBottle() {
   const b = $("bottle");
   b.style.left = ri(25, 70) + "vw";
   b.classList.add("ashore");
-  noise(0.8, { freq: 700, q: 0.4, vol: 0.18 });
+  noise(0.8, { freq: 400, q: 0.5, vol: 0.1, to: 1000 });
 }
 $("bottle").addEventListener("click", () => {
   $("bottle").classList.remove("ashore");
@@ -1208,8 +1505,8 @@ ballEl.addEventListener("pointerdown", (e) => {
   ball.air = true;
   ball.vy = -(780 + rand() * 220);
   ball.vx = (rand() - 0.5) * 360;
-  tone(220 + Math.min(ball.hits, 30) * 12, 0.08, { type: "triangle", vol: 0.25 });
-  noise(0.05, { freq: 800, vol: 0.2 });
+  tone(330 + Math.min(ball.hits, 30) * 20, 0.14, { type: "sine", vol: 0.16, to: 500 + Math.min(ball.hits, 30) * 20 });
+  noise(0.04, { freq: 600, vol: 0.06 });
   if (ball.hits) {
     ballCount.textContent = ball.hits;
     ballCount.classList.add("show");
@@ -1231,7 +1528,7 @@ function ballStep(dt) {
       ball.y = ground();
       if (ball.vy > 260) {
         ball.vy *= -0.38;
-        noise(0.06, { freq: 300, vol: 0.18 });
+        tone(160, 0.1, { to: 110, vol: 0.08 });
       } else {
         ball.air = false;
         ball.vy = ball.vx = 0;
