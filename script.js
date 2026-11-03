@@ -980,6 +980,11 @@ function finishPeel() {
   S.total++;
   S.pals[card.from] = (S.pals[card.from] || 0) + 1;
   if (S.album[st.id] && S.album[st.id].t > Date.now() - 1000) S.album[st.id].copy = card.no;
+  // Every postcard you finish gives Mr. Hinge one heart (life) back
+  if (S.hinge && S.hinge.sad > 0) {
+    S.hinge.sad = Math.max(0, S.hinge.sad - 20);
+    setTimeout(() => toast(`❤️ Mr. Hinge got a life back (${5 - Math.ceil(S.hinge.sad / 20)}/5)`, "good"), 1600);
+  }
   if (card.destroyed) givePower("tape", "Consolation prize");
   else if (rand() < 0.45 || card.no % 5 === 0) givePower(null, "Found under the stamp");
   save();
