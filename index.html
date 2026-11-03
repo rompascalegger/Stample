@@ -9,11 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Caveat:wght@500;700&family=Special+Elite&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.0.0">
+  <link rel="stylesheet" href="style.css?v=2.1.0">
 </head>
 <body>
   <div class="beach" aria-hidden="true">
-    <div class="sky"></div>
+    <div class="sky"><span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span></div>
     <div class="night-stars"></div>
     <button id="sun" class="sun" type="button" tabindex="-1" aria-hidden="true"></button>
     <div class="sea">
@@ -22,7 +22,17 @@
     </div>
   </div>
   <div id="props" class="props" aria-hidden="true">
+    <div class="wet-sand"></div>
+    <div class="footprints">👣 👣 👣 👣</div>
+    <button id="palm" class="prop palm" type="button" tabindex="-1">🌴</button>
+    <span class="prop deco palm2">🌴</span>
     <button id="umbrella" class="prop umbrella" type="button" tabindex="-1">⛱️</button>
+    <span class="prop deco towel"></span>
+    <span class="prop deco shades">🕶️</span>
+    <button id="icecream" class="prop icecream" type="button" tabindex="-1">🍦</button>
+    <button id="flipflop" class="prop flipflop" type="button" tabindex="-1">🩴</button>
+    <span class="prop deco starfish">⭐</span>
+    <span class="prop deco bucket">🪣</span>
     <button id="castle" class="prop castle" type="button" tabindex="-1" data-stage="0">🏰</button>
     <button id="crab" class="prop crab" type="button" tabindex="-1">🦀</button>
     <button id="gull" class="prop gull" type="button" tabindex="-1">🕊️</button>
@@ -62,7 +72,8 @@
             <div id="stamp-spot" class="stamp-spot">
               <div id="glue" class="glue" aria-hidden="true"></div>
               <div id="card-mark" class="card-mark" aria-hidden="true"></div>
-              <button id="stamp" class="stamp-live" type="button" aria-label="The stamp: drag on it slowly to peel it off (or press Space gently)"></button>
+              <button id="stamp" class="stamp-live" type="button" aria-label="The stamp: trace around it to tear it out, then peel its corners (or tap Space gently)"></button>
+              <svg id="work" class="work" viewBox="-14 -14 128 148" aria-hidden="true"></svg>
             </div>
             <div class="pc-address hand">
               <span id="to-name"></span>
@@ -77,10 +88,10 @@
     </div>
 
     <div class="meters">
-      <div class="meter"><span class="m-label">PEEL</span><div class="m-bar"><div id="peel-fill" class="m-fill peel"></div></div><span id="peel-pct" class="m-val">0%</span></div>
+      <div class="meter"><span id="m-peel-label" class="m-label">CUT</span><div class="m-bar"><div id="peel-fill" class="m-fill peel"></div></div><span id="peel-pct" class="m-val">0%</span></div>
       <div class="meter"><span class="m-label">STRAIN</span><div class="m-bar"><div id="strain-fill" class="m-fill strain"></div></div><span id="tears" class="m-val" title="Tears in this stamp">♡</span></div>
     </div>
-    <p id="hint" class="hint">Drag slowly across the stamp to peel it. Too fast and it tears.</p>
+    <p id="hint" class="hint"></p>
 
     <div class="btn-row">
       <button id="flip-btn" class="btn" type="button">↻ Flip card</button>
@@ -119,6 +130,7 @@
         <button class="tab" data-sort="origin" type="button">🌍 Origin</button>
         <button class="tab" data-sort="year" type="button">📅 Year</button>
         <button class="tab" data-sort="quality" type="button">★ Seal quality</button>
+        <button class="tab" data-sort="specials" type="button">✨ Specials</button>
         <button class="tab" data-sort="pals" type="button">✉️ Pen pals</button>
       </div>
       <div id="album-body" class="album-body"></div>
@@ -138,27 +150,29 @@
       <h2>How to play</h2>
       <ol class="help-steps">
         <li><b>Postcards arrive</b> from a chain of pen pals, one in every country of the world. Each card goes to the next country, and its pen pal writes the next card.</li>
-        <li><b>Peel the stamp slowly.</b> Drag across it again and again. Fast drags build up <b>strain</b>; at full strain the stamp tears. Old stamps are more fragile.</li>
+        <li><b>① Tear it out.</b> Trace the dotted line around the stamp, slowly. Rushing builds up <b>strain</b> and at full strain the stamp tears; drawing across the stamp cuts into it. The closer you stay to the line, the cleaner the cut.</li>
+        <li><b>② Peel it.</b> Drag from the glowing corner toward the middle, a short gentle stroke at a time, then the next corner. Pulling the wrong way strains it too. Old stamps are more fragile.</li>
         <li><b>The stamp</b> comes from the card's country, and its release year is real. Its id is the country code and that year, like <b>GB-1840</b>.</li>
         <li><b>The seal</b> (postmark) comes from a random country, in a year between the stamp's release and 2026.</li>
         <li><b>Quality</b> (out of 100):
           <ul>
-            <li>Condition: no tears 40, one tear 28, two 16, more 6</li>
-            <li>Luck: the closer the seal is to the stamp's center, the more of 25</li>
-            <li>Home seal: seal from the stamp's own country +20</li>
-            <li>First day: seal year is the stamp's release year +15</li>
+            <li>Condition: no tears 35, one tear 24, two 13, more 4</li>
+            <li>Cut: up to 10 for a clean tear-out</li>
+            <li>Luck: up to 20, the closer the seal is to the stamp's center</li>
+            <li>Specials: up to 35 for remarkable seals: 🏠 home seal (same country as the stamp) +15, 📅 first day (sealed in the release year) +10, 💯 century +8, 🎯 bullseye, 🪃 boomerang, 🗓️ today, 👑 legendary +5, 🎉 jubilee +4, and more. Some of them combine into something crazy.</li>
           </ul>
         </li>
-        <li><b>The album</b> keeps the best copy of every stamp. Sort it by origin, by year, or by seal quality. Stamps you don't have yet are just <b>?</b>.</li>
+        <li><b>The album</b> keeps the best copy of every stamp. Sort it by origin, by year, by seal quality or by specials. Stamps you don't have yet are just <b>?</b>.</li>
       </ol>
       <p class="help-grades" id="help-grades"></p>
       <p class="secrets">🥚 Secrets found: <b id="egg-count">0</b> / <span id="egg-total">0</span> &middot; the beach is full of them</p>
     </div>
   </div>
 
+  <div id="alert" class="alert" hidden role="alert"></div>
   <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script src="data.js?v=2.0.0"></script>
-  <script src="script.js?v=2.0.0"></script>
+  <script src="data.js?v=2.1.0"></script>
+  <script src="script.js?v=2.1.0"></script>
 </body>
 </html>
